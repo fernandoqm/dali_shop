@@ -369,3 +369,6 @@ label.f input:focus,label.f select:focus,label.f textarea:focus{outline:0;border
 }
 .avisar{display:inline-flex;align-items:center;padding:7px 12px;border-radius:10px;background:#e8f8ee;border:1px solid #c6ecd5;color:#16803f;font-size:13px;font-weight:600;text-decoration:none}
 .avisar:hover{background:#d4f3e0}
+
+/* Aviso de retiro (sin tienda física) */
+.aviso-retiro{background:var(--soft);border-color:var(--tint);color:var(--brand-d)}

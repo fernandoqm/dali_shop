@@ -486,7 +486,7 @@ function avisoCliente(p) {
     preparando: `estamos preparando tu pedido ${p.codigo}.`,
     listo: envio
       ? `tu pedido ${p.codigo} está listo y pronto saldrá con el mensajero. Te confirmamos el costo del envío.`
-      : `tu pedido ${p.codigo} está listo para recoger.`,
+      : `tu pedido ${p.codigo} está listo. Coordinemos el lugar y la hora de entrega.`,
     en_camino: `tu pedido ${p.codigo} va en camino.`,
     entregado: `tu pedido ${p.codigo} fue entregado. ¡Gracias por tu compra!`,
     cancelado: `tu pedido ${p.codigo} fue cancelado. Si tienes dudas, escríbenos.`
@@ -542,7 +542,7 @@ function pintarPedidos() {
         return `<div class="pedido" data-id="${esc(p.id)}">
         <div class="h"><span>#${esc(p.codigo)} · ${esc(p.cliente?.nombre)}</span>
           <span><span class="est ${p.pagado ? "listo" : "nuevo"}">${p.pagado ? "Pagado" : "Sin pagar"}</span> <span class="est ${esc(p.estado)}">${esc(nombreEstado(p.estado))}</span></span></div>
-        <div class="d">${esc(f)} · ${envio ? "Envío" : "Recoge en tienda"} · <a href="tel:${esc(p.cliente?.telefono)}">${esc(p.cliente?.telefono)}</a>
+        <div class="d">${esc(f)} · ${envio ? "Envío" : "Retiro en punto acordado"} · <a href="tel:${esc(p.cliente?.telefono)}">${esc(p.cliente?.telefono)}</a>
           ${p.direccion ? `<br>${esc(p.direccion)}` : ""}${p.notas ? `<br><i>${esc(p.notas)}</i>` : ""}</div>
         <ul>${(p.items || []).map((i) => `<li>${esc(i.cant)} × ${esc(i.nombre)} — ${esc(precio(i.precio * i.cant))}</li>`).join("")}</ul>
         <div class="row"><b>Total ${esc(precio(p.total))}</b>

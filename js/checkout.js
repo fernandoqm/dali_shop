@@ -37,6 +37,7 @@ function pintar() {
   $("#total").textContent = precio(cart.subtotal() + costo);
   $("#lblDir").hidden = !envio;
   $("#notaEnvio").hidden = !envio;
+  $("#notaRetiro").hidden = envio;
   $("#lblTotal").textContent = envio ? "Total (sin envío)" : "Total";
 }
 
@@ -141,7 +142,7 @@ function exito(datos) {
   $("#textoExito").textContent =
     datos.tipo === "envio"
       ? "Te contactaremos para coordinar el envío y confirmarte su costo, que se suma al total."
-      : "Te avisaremos cuando esté listo para recoger.";
+      : "Te contactaremos para acordar el lugar y la hora de entrega.";
   const pago = (cfgTienda.pago || "").trim();
   $("#pagoTxt").textContent = pago;
   $("#pagoBox").hidden = !pago;

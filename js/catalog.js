@@ -241,7 +241,7 @@ function abrirDetalle(p) {
   try {
     history.replaceState(null, "", `?p=${encodeURIComponent(p.id)}`);
   } catch {}
-  $("#detNota").innerHTML = `${ICONOS.tienda}<span>Retira en tienda o pide envío a domicilio al confirmar tu pedido.</span>`;
+  $("#detNota").innerHTML = `${ICONOS.pin}<span>Recoge en un punto acordado o pide envío a domicilio al confirmar tu pedido.</span>`;
   $("#detAgregar").innerHTML = `${ICONOS.bolsa}<span>Agregar al carrito</span>`;
   $("#detWa").innerHTML = `${ICONOS.chat}<span>Pedir por WhatsApp</span>`;
   $("#detCompartir").innerHTML = `${ICONOS.compartir}<span>Compartir</span>`;

@@ -34,10 +34,10 @@ export function pintarFooter(cfg) {
     <div class="foot-main">
       <div class="foot-marca">
         <a class="foot-logo" href="./"><img src="img/logo.webp" alt="" width="56" height="56"><span>${esc(tienda.nombre)}</span></a>
-        <p>Artículos para el hogar, la oficina y tu día a día. Retira en tienda o recibe tu pedido donde estés.</p>
+        <p>Artículos para el hogar, la oficina y tu día a día. Recoge en un punto acordado o recibe tu pedido donde estés.</p>
         ${wa ? `<a class="foot-wa" href="${esc(wa)}" target="_blank" rel="noopener">${ICONOS.chat}<span>Escríbenos por WhatsApp</span></a>` : ""}
       </div>
-      ${columna("Visítanos", visita)}
+      ${columna("Atención", visita)}
       ${columna("Contacto", contacto)}
       <div class="foot-col"><h3>Tienda</h3><ul class="foot-links">
         <li><a href="./">Catálogo</a></li>

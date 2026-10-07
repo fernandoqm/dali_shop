@@ -18,7 +18,7 @@ export const textoProducto = (nombre, precioUnidad, cant = 1, enlace = "") =>
 
 export function textoPedido({ codigo, nombre, tipo, direccion, lineas, total }) {
   return (
-    `Hola, soy ${nombre}. Quiero confirmar mi pedido ${codigo} (${tipo === "envio" ? "envío" : "paso a recoger"}):\n` +
+    `Hola, soy ${nombre}. Quiero confirmar mi pedido ${codigo} (${tipo === "envio" ? "envío" : "retiro en punto acordado"}):\n` +
     `${listaTexto(lineas)}\nTotal: ${precio(total)}${tipo === "envio" ? " + envío (por confirmar según el mensajero)" : ""}` +
     (tipo === "envio" && direccion ? `\nDirección: ${direccion}` : "")
   );
@@ -40,7 +40,7 @@ export async function enviarCorreo(p, para) {
         codigo: p.codigo,
         nombre: p.nombre,
         telefono: p.telefono,
-        tipo: p.tipo === "envio" ? "Envío (costo por confirmar según el mensajero)" : "Paso a recoger",
+        tipo: p.tipo === "envio" ? "Envío (costo por confirmar según el mensajero)" : "Retiro en punto acordado",
         direccion: p.direccion || "—",
         notas: p.notas || "—",
         pedido: p.lineas.map((l) => `${l.cant} x ${l.nombre} (${precio(l.precio)} c/u)`).join("\n"),
