@@ -1,5 +1,5 @@
 import { tienda, emailjs } from "./config.js";
-import { precio } from "./util.js";
+import { precio, esc } from "./util.js";
 
 export const waLink = (texto) =>
   tienda.whatsapp ? `https://wa.me/${tienda.whatsapp}?text=${encodeURIComponent(texto)}` : "";
@@ -44,6 +44,8 @@ export async function enviarCorreo(p, para) {
         direccion: p.direccion || "—",
         notas: p.notas || "—",
         pedido: p.lineas.map((l) => `${l.cant} x ${l.nombre} (${precio(l.precio)} c/u)`).join("\n"),
+        // Versión para plantillas HTML: usar {{{pedido_html}}} (triple llave) para respetar los saltos de línea
+        pedido_html: p.lineas.map((l) => `• ${esc(String(l.cant))} x ${esc(l.nombre)} (${esc(precio(l.precio))} c/u)`).join("<br>"),
         total: precio(p.total)
       }
     })

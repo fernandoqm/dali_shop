@@ -25,7 +25,7 @@ export const configurado = !String(firebaseConfig.apiKey).startsWith("TU_");
 
 // Aviso de pedidos por correo con EmailJS (https://www.emailjs.com). Si dejas vacío, no se envía correo.
 export const emailjs = {
-  serviceId: "",
-  templateId: "",
-  publicKey: ""
+  serviceId: "service_if94c4f",
+  templateId: "template_hfr8b4k",
+  publicKey: "s7gPzEIwmgM-GPZZI"
 };
