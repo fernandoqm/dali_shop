@@ -206,3 +206,8 @@ main.wrap,main.page,#panel{flex:1 0 auto}
 .atabs::-webkit-scrollbar{display:none}
 .atab{flex:none;white-space:nowrap}
 .item>div:first-child+div,.item>div:nth-child(2){min-width:0}
+
+/* Botón de foto bien visible */
+.foto-btn{border:2px dashed var(--brand);background:var(--soft);color:var(--brand-d);font-weight:600;padding:20px 14px;border-radius:12px}
+.foto-btn::before{content:"📷";display:block;font-size:30px;line-height:1.2;margin-bottom:4px}
+.foto-btn:hover{background:var(--tint)}
