@@ -8,8 +8,8 @@ export const firebaseConfig = {
 
 // Cloudinary: cloudName está en el Dashboard; uploadPreset debe ser "Unsigned" (Settings > Upload > Upload presets)
 export const cloudinary = {
-  cloudName: "TU_CLOUD_NAME",
-  uploadPreset: "TU_UPLOAD_PRESET",
+  cloudName: "p2js7vpn",
+  uploadPreset: "dali_shop",
   carpeta: "dali_shop"
 };
 
