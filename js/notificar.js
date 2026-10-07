@@ -12,6 +12,10 @@ export const textoConsulta = (items) =>
     ? `Hola, me interesa consultar por:\n${listaTexto(items)}`
     : "Hola, quisiera hacer una consulta sobre sus artículos.";
 
+// Consulta por un artículo puntual desde su tarjeta o ficha
+export const textoProducto = (nombre, precioUnidad, cant = 1) =>
+  `Hola, me interesa este artículo:\n• ${cant} x ${nombre} (${precio(precioUnidad)} c/u)\n¿Está disponible?`;
+
 export function textoPedido({ codigo, nombre, tipo, direccion, lineas, total }) {
   return (
     `Hola, soy ${nombre}. Quiero confirmar mi pedido ${codigo} (${tipo === "envio" ? "envío" : "paso a recoger"}):\n` +

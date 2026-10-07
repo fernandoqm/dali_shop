@@ -85,7 +85,7 @@ form.addEventListener("submit", async (e) => {
         const p = s.exists() ? s.data() : null;
         if (!p || !p.activo) throw new Error(`"${i.nombre}" ya no está disponible.`);
         const stock = Number(p.cantidad) || 0;
-        if (stock < i.cant) throw new Error(stock <= 0 ? `"${p.nombre}" se agotó.` : `De "${p.nombre}" solo quedan ${stock}.`);
+        if (stock < i.cant) throw new Error(stock <= 0 ? `"${p.nombre}" ya no está disponible.` : `De "${p.nombre}" no hay suficientes unidades.`);
         lineas.push({ id: s.id, nombre: p.nombre, precio: precioFinal(p), cant: i.cant, nuevoStock: stock - i.cant });
       });
       const subtotal = lineas.reduce((a, l) => a + l.precio * l.cant, 0);

@@ -270,7 +270,7 @@ function pintarProductos() {
         <div>
           <div class="t">${esc(p.nombre)}${enOferta(p) ? `<span class="pill of">Oferta</span>` : ""}${p.activo ? "" : `<span class="pill off">Oculto</span>`}</div>
           <div class="s">${esc(p.categoria || "Sin categoría")} · ${enOferta(p) ? `<s>${esc(precio(p.precio))}</s> <b>${esc(precio(p.precioOferta))}</b>` : esc(precio(p.precio))} ·
-            <span style="${stock <= 0 ? "color:var(--warn);font-weight:600" : ""}">${stock <= 0 ? "Agotado" : `Stock ${stock}`}</span></div>
+            <span style="${stock <= 0 ? "color:var(--warn);font-weight:600" : ""}">${stock <= 0 ? "Sin existencias · no se muestra en la tienda" : `Disponibles: ${stock}`}</span></div>
         </div>
         <div style="display:flex;gap:6px"><button class="ibtn" data-a="editar">Editar</button><button class="ibtn" data-a="borrar" aria-label="Eliminar">🗑</button></div>
       </div>`;

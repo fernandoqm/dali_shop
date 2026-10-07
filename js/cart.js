@@ -19,15 +19,18 @@ export const items = () => Object.values(leer());
 export const cantidadTotal = () => items().reduce((a, i) => a + i.cant, 0);
 export const subtotal = () => items().reduce((a, i) => a + i.cant * i.precio, 0);
 
-// p: {id, nombre, precio, imagen, stock}
-export function agregar(p) {
+// p: {id, nombre, precio, imagen, stock}. Devuelve cuántas unidades se agregaron (0 si no hay más disponibles)
+export function agregar(p, n = 1) {
   const c = leer();
   const actual = c[p.id]?.cant || 0;
-  if (actual >= p.stock) return false;
-  c[p.id] = { id: p.id, nombre: p.nombre, precio: p.precio, imagen: p.imagen, stock: p.stock, cant: actual + 1 };
+  const nueva = Math.min(p.stock, actual + Math.max(1, n));
+  if (nueva <= actual) return 0;
+  c[p.id] = { id: p.id, nombre: p.nombre, precio: p.precio, imagen: p.imagen, stock: p.stock, cant: nueva };
   guardar(c);
-  return true;
+  return nueva - actual;
 }
+
+export const cantidadDe = (id) => leer()[id]?.cant || 0;
 
 export function cambiar(id, delta) {
   const c = leer();
