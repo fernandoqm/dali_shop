@@ -268,7 +268,7 @@ function pintarProductos() {
           return `<div class="item" data-id="${esc(p.id)}">
         <img src="${esc(fotoUrl(p.imagen, 120))}" alt="">
         <div>
-          <div class="t">${esc(p.nombre)}${enOferta(p) ? `<span class="pill of">Oferta</span>` : ""}${p.activo ? "" : `<span class="pill off">Oculto</span>`}</div>
+          <div class="t">${esc(p.nombre)}${enOferta(p) ? `<span class="pill of">Oferta</span>` : ""}${p.destacado ? `<span class="pill sin">Destacado</span>` : ""}${p.activo ? "" : `<span class="pill off">Oculto</span>`}</div>
           <div class="s">${esc(p.categoria || "Sin categoría")} · ${enOferta(p) ? `<s>${esc(precio(p.precio))}</s> <b>${esc(precio(p.precioOferta))}</b>` : esc(precio(p.precio))} ·
             <span style="${stock <= 0 ? "color:var(--warn);font-weight:600" : ""}">${stock <= 0 ? "Sin existencias · no se muestra en la tienda" : `Disponibles: ${stock}`}</span></div>
         </div>
@@ -314,6 +314,8 @@ function abrirModal(p = null) {
     form.precioOferta.value = p.precioOferta ?? "";
     form.mostrarAhorro.checked = p.mostrarAhorro !== false;
     form.activo.checked = p.activo !== false;
+    form.descripcion.value = p.descripcion || "";
+    form.destacado.checked = !!p.destacado;
   }
   verPreview(p?.imagen ? miniatura(p.imagen, 600) : "");
   syncOferta();
@@ -377,7 +379,9 @@ form.addEventListener("submit", async (e) => {
       activo: form.activo.checked,
       oferta,
       precioOferta: oferta ? precioOferta : 0,
-      mostrarAhorro: form.mostrarAhorro.checked
+      mostrarAhorro: form.mostrarAhorro.checked,
+      descripcion: form.descripcion.value.trim(),
+      destacado: form.destacado.checked
     };
     if (editando) await updateDoc(doc(db, "productos", editando.id), datos);
     else await addDoc(collection(db, "productos"), { ...datos, fecha: serverTimestamp() });
@@ -394,7 +398,7 @@ form.addEventListener("submit", async (e) => {
 
 /* ---------- Ajustes (correo de pedidos y mensajeros) ---------- */
 function cargarAjustes(cfg) {
-  const campos = { correoPedidos: "#correoPedidos", direccion: "#negDireccion", telefonos: "#negTelefonos", correoContacto: "#negCorreo", horario: "#negHorario" };
+  const campos = { correoPedidos: "#correoPedidos", direccion: "#negDireccion", telefonos: "#negTelefonos", correoContacto: "#negCorreo", horario: "#negHorario", pago: "#negPago" };
   for (const [k, sel] of Object.entries(campos)) if (document.activeElement !== $(sel)) $(sel).value = cfg[k] || "";
   const m = cfg.mensajeros || [];
   $("#listaMens").innerHTML = m.length
@@ -428,7 +432,8 @@ $("#negocioForm").addEventListener("submit", (e) => {
     direccion: $("#negDireccion").value.trim(),
     telefonos: $("#negTelefonos").value.trim(),
     correoContacto: correo,
-    horario: $("#negHorario").value.trim()
+    horario: $("#negHorario").value.trim(),
+    pago: $("#negPago").value.trim()
   }, "Datos del negocio guardados");
 });
 
@@ -477,10 +482,30 @@ function textoMensajero(p) {
     `${(p.items || []).map((i) => `• ${i.cant} x ${i.nombre}`).join("\n")}\n${cobro}`;
 }
 
+// Resumen de ventas (sobre los últimos 200 pedidos cargados; no cuenta cancelados)
+function pintarResumen() {
+  const hoy = new Date();
+  const validos = pedidos.filter((p) => p.estado !== "cancelado" && p.fecha?.toDate);
+  const mismoDia = (d) => d.toDateString() === hoy.toDateString();
+  const mismoMes = (d) => d.getMonth() === hoy.getMonth() && d.getFullYear() === hoy.getFullYear();
+  const suma = (l) => l.reduce((t, p) => t + (Number(p.total) || 0), 0);
+  const deHoy = validos.filter((p) => mismoDia(p.fecha.toDate()));
+  const delMes = validos.filter((p) => mismoMes(p.fecha.toDate()));
+  const porEntregar = validos.filter((p) => p.estado !== "entregado");
+  const porCobrar = validos.filter((p) => !p.pagado);
+  const tile = (t, v, s) => `<div class="stat"><span>${t}</span><b>${v}</b><small>${s}</small></div>`;
+  $("#statsPed").innerHTML =
+    tile("Hoy", precio(suma(deHoy)), `${deHoy.length} pedido${deHoy.length === 1 ? "" : "s"}`) +
+    tile("Este mes", precio(suma(delMes)), `${delMes.length} pedido${delMes.length === 1 ? "" : "s"}`) +
+    tile("Por entregar", porEntregar.length, "pedidos") +
+    tile("Por cobrar", precio(suma(porCobrar)), `${porCobrar.length} sin pagar`);
+}
+
 function pintarPedidos() {
   const nuevos = pedidos.filter((p) => p.estado === "nuevo").length;
   $("#nuevos").textContent = nuevos;
   $("#nuevos").hidden = !nuevos;
+  pintarResumen();
 
   $("#filtrosPed").innerHTML = Object.entries(FILTROS)
     .map(([k, [t, fn]]) => `<button class="tab" data-f="${k}" aria-selected="${k === filtro}">${t} (${pedidos.filter(fn).length})</button>`)

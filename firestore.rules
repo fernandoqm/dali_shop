@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function productoValido(d) {
-      return d.keys().hasOnly(['nombre','categoria','precio','cantidad','imagen','activo','oferta','precioOferta','mostrarAhorro','fecha'])
+      return d.keys().hasOnly(['nombre','categoria','precio','cantidad','imagen','activo','oferta','precioOferta','mostrarAhorro','fecha','descripcion','destacado'])
         && d.keys().hasAll(['nombre','precio','cantidad','activo'])
         && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 80
         && esTexto(d.get('categoria', ''), 40)
@@ -26,7 +26,9 @@ service cloud.firestore {
         && d.activo is bool
         && d.get('oferta', false) is bool
         && d.get('precioOferta', 0) is number && d.get('precioOferta', 0) >= 0
-        && d.get('mostrarAhorro', true) is bool;
+        && d.get('mostrarAhorro', true) is bool
+        && esTexto(d.get('descripcion', ''), 600)
+        && d.get('destacado', false) is bool;
     }
 
     function pedidoValido(d) {
@@ -81,7 +83,7 @@ service cloud.firestore {
     match /config/{id} {
       allow read: if true;
       allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['tema','mostrarMensaje','mensaje','correoPedidos','mensajeros','direccion','telefonos','correoContacto','horario','categorias'])
+        && request.resource.data.keys().hasOnly(['tema','mostrarMensaje','mensaje','correoPedidos','mensajeros','direccion','telefonos','correoContacto','horario','categorias','pago'])
         && esTexto(request.resource.data.get('tema', 'clasico'), 30)
         && request.resource.data.get('mostrarMensaje', true) is bool
         && esTexto(request.resource.data.get('mensaje', ''), 120)
@@ -90,6 +92,7 @@ service cloud.firestore {
         && esTexto(request.resource.data.get('telefonos', ''), 200)
         && esTexto(request.resource.data.get('correoContacto', ''), 120)
         && esTexto(request.resource.data.get('horario', ''), 200)
+        && esTexto(request.resource.data.get('pago', ''), 300)
         && request.resource.data.get('mensajeros', []) is list
         && request.resource.data.get('mensajeros', []).size() <= 20
         && request.resource.data.get('categorias', []) is list

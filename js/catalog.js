@@ -15,6 +15,7 @@ iniciarFooter();
 
 const TODOS = "Todos";
 const SIN_CAT = "Otros";
+const OFERTAS = "__ofertas";
 
 let cargado = false;
 let productos = [];   // todos los activos (incluye los sin existencias, que no se muestran)
@@ -47,9 +48,11 @@ onSnapshot(
   (snap) => {
     cargado = true;
     productos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    productos.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
+    // Destacados primero; luego los más recientes
+    productos.sort((a, b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0) || (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
     render();
     renderCart();
+    abrirDesdeEnlace();
   },
   (err) => {
     console.error(err);
@@ -73,18 +76,23 @@ function render() {
   const disponibles = visibles();
   // Solo hay pestaña para categorías con artículos disponibles
   const cats = categoriasOrdenadas(disponibles);
-  if (categoria !== TODOS && !cats.includes(categoria)) categoria = TODOS;
-  const conTabs = cats.length > 1;
+  const hayOfertas = disponibles.some(enOferta);
+  if (categoria === OFERTAS ? !hayOfertas : categoria !== TODOS && !cats.includes(categoria)) categoria = TODOS;
+  const conTabs = cats.length > 1 || hayOfertas;
+  const pestanas = [TODOS, ...(hayOfertas ? [OFERTAS] : []), ...cats];
   $("#tabs").hidden = !conTabs;
   $("#tabs").innerHTML = conTabs
-    ? [TODOS, ...cats].map((c) => `<button class="tab" role="tab" data-cat="${esc(c)}" aria-selected="${c === categoria}">${esc(c)}</button>`).join("")
+    ? pestanas.map((c) => `<button class="tab${c === OFERTAS ? " tab-oferta" : ""}" role="tab" data-cat="${esc(c)}" aria-selected="${c === categoria}">${c === OFERTAS ? "Ofertas" : esc(c)}</button>`).join("")
     : "";
 
-  let lista = categoria === TODOS ? disponibles : disponibles.filter((p) => catDe(p) === categoria);
+  let lista =
+    categoria === TODOS ? disponibles : categoria === OFERTAS ? disponibles.filter(enOferta) : disponibles.filter((p) => catDe(p) === categoria);
   const q = normal(busqueda.trim());
   if (q) lista = lista.filter((p) => normal(`${p.nombre} ${p.categoria || ""}`).includes(q));
 
-  $("#titulo").textContent = q ? `Resultados para “${busqueda.trim()}”` : categoria === TODOS ? "Todos los artículos" : categoria;
+  $("#titulo").textContent = q
+    ? `Resultados para “${busqueda.trim()}”`
+    : categoria === TODOS ? "Todos los artículos" : categoria === OFERTAS ? "Ofertas" : categoria;
   $("#conteo").textContent = lista.length ? `${lista.length} artículo${lista.length === 1 ? "" : "s"}` : "";
 
   if (!lista.length) {
@@ -104,16 +112,20 @@ function precioHtml(p) {
   }</div>`;
 }
 
+// Enlace directo a la ficha de un artículo (para compartir)
+const enlaceDe = (p) => `${location.origin}${location.pathname}?p=${encodeURIComponent(p.id)}`;
+
 const stickerDe = (p) => (enOferta(p) && p.mostrarAhorro !== false ? `Oferta -${descuento(p)}%` : "");
 
 function tarjeta(p) {
   const st = stickerDe(p);
-  const wa = waLink(textoProducto(p.nombre, precioFinal(p)));
+  const wa = waLink(textoProducto(p.nombre, precioFinal(p), 1, enlaceDe(p)));
   const nombre = esc(p.nombre);
   return `<article class="prod" data-id="${esc(p.id)}">
     <button class="ph" data-a="ver" aria-label="Ver ${nombre}">
       <img src="${esc(fotoUrl(p.imagen))}" alt="${nombre}" loading="lazy">
       ${st ? `<span class="sticker">${esc(st)}</span>` : ""}
+      ${p.destacado ? `<span class="dest">Destacado</span>` : ""}
     </button>
     <div class="info">
       ${p.categoria ? `<span class="cat">${esc(p.categoria)}</span>` : ""}
@@ -181,7 +193,7 @@ function bloquear() {
 function pintarCantidad() {
   $("#detCant").textContent = cantDetalle;
   if (enDetalle) {
-    const wa = waLink(textoProducto(enDetalle.nombre, precioFinal(enDetalle), cantDetalle));
+    const wa = waLink(textoProducto(enDetalle.nombre, precioFinal(enDetalle), cantDetalle, enlaceDe(enDetalle)));
     $("#detWa").hidden = !wa;
     if (wa) $("#detWa").href = wa;
   }
@@ -202,9 +214,16 @@ function abrirDetalle(p) {
   const ahorro = enOferta(p) && p.mostrarAhorro !== false ? Number(p.precio) - Number(p.precioOferta) : 0;
   $("#detAhorro").textContent = ahorro ? `Ahorras ${precio(ahorro)}` : "";
   $("#detAhorro").hidden = !ahorro;
+  const desc = (p.descripcion || "").trim();
+  $("#detDesc").textContent = desc;
+  $("#detDesc").hidden = !desc;
+  try {
+    history.replaceState(null, "", `?p=${encodeURIComponent(p.id)}`);
+  } catch {}
   $("#detNota").innerHTML = `${ICONOS.tienda}<span>Retira en tienda o pide envío a domicilio al confirmar tu pedido.</span>`;
   $("#detAgregar").innerHTML = `${ICONOS.bolsa}<span>Agregar al carrito</span>`;
   $("#detWa").innerHTML = `${ICONOS.chat}<span>Pedir por WhatsApp</span>`;
+  $("#detCompartir").innerHTML = `${ICONOS.compartir}<span>Compartir</span>`;
   pintarCantidad();
   $("#detalle").hidden = false;
   $("#detFondo").hidden = false;
@@ -213,6 +232,9 @@ function abrirDetalle(p) {
 }
 
 function cerrarDetalle() {
+  try {
+    history.replaceState(null, "", location.pathname);
+  } catch {}
   $("#detalle").hidden = true;
   $("#detFondo").hidden = true;
   enDetalle = null;
@@ -236,6 +258,37 @@ $("#detMas").addEventListener("click", () => {
 $("#detAgregar").addEventListener("click", () => {
   if (enDetalle && agregarAlCarrito(enDetalle, cantDetalle)) cerrarDetalle();
 });
+
+// Compartir el artículo (menú nativo del celular o copiar el enlace)
+$("#detCompartir").addEventListener("click", async () => {
+  if (!enDetalle) return;
+  const url = enlaceDe(enDetalle);
+  const datos = { title: enDetalle.nombre, text: `${enDetalle.nombre} · ${precio(precioFinal(enDetalle))} en Dali Shop`, url };
+  try {
+    if (navigator.share) return await navigator.share(datos);
+    await navigator.clipboard.writeText(url);
+    toast("Enlace copiado");
+  } catch (e) {
+    if (e?.name !== "AbortError") toast("No se pudo compartir", "err");
+  }
+});
+
+// Abre la ficha si el enlace trae ?p=<id> (solo la primera vez que carga el catálogo)
+let enlaceRevisado = false;
+function abrirDesdeEnlace() {
+  if (enlaceRevisado) return;
+  enlaceRevisado = true;
+  const id = new URLSearchParams(location.search).get("p");
+  if (!id) return;
+  const p = visibles().find((x) => x.id === id);
+  if (p) abrirDetalle(p);
+  else {
+    try {
+      history.replaceState(null, "", location.pathname);
+    } catch {}
+    toast("Ese artículo ya no está disponible", "err");
+  }
+}
 
 /* ---------- Carrito ---------- */
 function renderCart() {

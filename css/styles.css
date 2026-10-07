@@ -303,3 +303,19 @@ label.f input:focus,label.f select:focus,label.f textarea:focus{outline:0;border
 @media (min-width:900px){
   .hero-art{display:block;position:absolute;right:40px;top:50%;width:230px;height:230px;border-radius:50%;transform:translateY(-50%) rotate(-6deg);box-shadow:0 30px 60px -20px rgba(0,0,0,.45),0 0 0 10px rgba(255,255,255,.6)}
 }
+
+/* Mejoras: destacado, descripción, ofertas, aviso de envío, pago y resumen */
+.dest{position:absolute;top:12px;right:12px;z-index:1;padding:5px 10px;border-radius:999px;background:rgba(17,20,22,.82);color:#fff;font-size:11px;font-weight:600;letter-spacing:.04em;backdrop-filter:blur(4px)}
+.dest::before{content:"★ ";color:#ffd166}
+.desc{margin:0;font-size:15px;line-height:1.6;color:var(--muted);white-space:pre-line}
+.tab-oferta{color:var(--offer);border-color:#f5c6c2}
+.tab-oferta[aria-selected="true"]{background:var(--offer);border-color:var(--offer);color:#fff}
+.aviso-envio{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:#fff6e0;border:1px solid #f5dfa6;color:#6b4e00;font-size:14px;line-height:1.5}
+.pago-box{margin:0 0 16px;padding:14px 16px;border-radius:14px;background:var(--soft);border:1px solid var(--tint);text-align:left}
+.pago-box b{display:block;margin-bottom:4px;color:var(--brand-d)}
+.pago-box p{margin:0;white-space:pre-line}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat{padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:var(--shadow-sm)}
+.stat span{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat b{display:block;margin:4px 0 2px;font-size:22px}
+.stat small{color:var(--muted)}

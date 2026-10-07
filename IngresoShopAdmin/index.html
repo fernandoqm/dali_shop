@@ -62,6 +62,7 @@
       </section>
 
       <section id="tabPedidos" hidden>
+        <div class="stats" id="statsPed"></div>
         <nav class="tabs" id="filtrosPed" aria-label="Filtrar pedidos"></nav>
         <div id="listaPed"></div>
       </section>
@@ -73,6 +74,7 @@
           <label class="f">Teléfonos (uno por línea o separados por coma)<textarea id="negTelefonos" rows="2" maxlength="200" placeholder="2222-3333, 8888-9999"></textarea></label>
           <label class="f">Correo de contacto<input id="negCorreo" type="email" inputmode="email" maxlength="120"></label>
           <label class="f">Horario (opcional)<textarea id="negHorario" rows="2" maxlength="200" placeholder="Lunes a sábado, 9:00 a 18:00"></textarea></label>
+          <label class="f">Instrucciones de pago (se muestran al confirmar el pedido)<textarea id="negPago" rows="3" maxlength="300" placeholder="SINPE Móvil 8564-6198 a nombre de …&#10;Envía el comprobante por WhatsApp."></textarea></label>
           <button class="btn" type="submit" style="max-width:260px">Guardar datos del negocio</button>
         </form>
         <form id="ajustesForm" class="box">
@@ -115,6 +117,7 @@
 
       <label class="f">Nombre<input name="nombre" required maxlength="80"></label>
       <label class="f">Categoría<select name="categoria" id="selCat"></select></label>
+      <label class="f">Descripción (opcional)<textarea name="descripcion" rows="3" maxlength="600" placeholder="Medidas, material, colores, cuidados…"></textarea></label>
       <div class="opts">
         <label class="f">Precio normal<input name="precio" type="number" min="0" step="any" inputmode="decimal" required></label>
         <label class="f">Cantidad<input name="cantidad" type="number" min="0" step="1" inputmode="numeric" required></label>
@@ -129,6 +132,7 @@
         </div>
       </div>
 
+      <label class="chk"><input type="checkbox" name="destacado"> Destacado (aparece primero en la tienda)</label>
       <label class="chk"><input type="checkbox" name="activo" checked> Visible en la tienda</label>
 
       <div class="msg" id="prodError" hidden></div>

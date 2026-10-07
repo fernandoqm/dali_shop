@@ -13,13 +13,13 @@ export const textoConsulta = (items) =>
     : "Hola, quisiera hacer una consulta sobre sus artículos.";
 
 // Consulta por un artículo puntual desde su tarjeta o ficha
-export const textoProducto = (nombre, precioUnidad, cant = 1) =>
-  `Hola, me interesa este artículo:\n• ${cant} x ${nombre} (${precio(precioUnidad)} c/u)\n¿Está disponible?`;
+export const textoProducto = (nombre, precioUnidad, cant = 1, enlace = "") =>
+  `Hola, me interesa este artículo:\n• ${cant} x ${nombre} (${precio(precioUnidad)} c/u)\n¿Está disponible?` + (enlace ? `\n${enlace}` : "");
 
 export function textoPedido({ codigo, nombre, tipo, direccion, lineas, total }) {
   return (
     `Hola, soy ${nombre}. Quiero confirmar mi pedido ${codigo} (${tipo === "envio" ? "envío" : "paso a recoger"}):\n` +
-    `${listaTexto(lineas)}\nTotal: ${precio(total)}` +
+    `${listaTexto(lineas)}\nTotal: ${precio(total)}${tipo === "envio" ? " + envío (por confirmar según el mensajero)" : ""}` +
     (tipo === "envio" && direccion ? `\nDirección: ${direccion}` : "")
   );
 }
@@ -40,7 +40,7 @@ export async function enviarCorreo(p, para) {
         codigo: p.codigo,
         nombre: p.nombre,
         telefono: p.telefono,
-        tipo: p.tipo === "envio" ? "Envío" : "Paso a recoger",
+        tipo: p.tipo === "envio" ? "Envío (costo por confirmar según el mensajero)" : "Paso a recoger",
         direccion: p.direccion || "—",
         notas: p.notas || "—",
         pedido: p.lineas.map((l) => `${l.cant} x ${l.nombre} (${precio(l.precio)} c/u)`).join("\n"),
