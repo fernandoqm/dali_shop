@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
+  <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Administración · Dali Shop</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <section class="page" id="login" hidden>
+    <div class="box">
+      <h2>Ingreso administración</h2>
+      <form id="loginForm">
+        <label class="f">Correo<input name="email" type="email" autocomplete="username" required></label>
+        <label class="f">Contraseña<input name="password" type="password" autocomplete="current-password" required></label>
+        <div class="msg" id="loginError" hidden></div>
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+    </div>
+  </section>
+
+  <div id="panel" hidden>
+    <header class="top">
+      <div class="wrap">
+        <span class="logo"><img src="../img/logo.webp" alt="" width="44" height="44"><span>Panel</span></span>
+        <span><a href="../" style="margin-right:14px">Ver tienda</a><button class="ibtn" id="btnSalir">Salir</button></span>
+      </div>
+    </header>
+
+    <main class="wrap" style="padding-top:14px;padding-bottom:60px">
+      <div class="atabs" role="tablist">
+        <button class="atab" role="tab" data-tab="articulos" aria-selected="true">Artículos</button>
+        <button class="atab" role="tab" data-tab="pedidos" aria-selected="false">Pedidos <span class="badge" id="nuevos" hidden>0</span></button>
+        <button class="atab" role="tab" data-tab="apariencia" aria-selected="false">Apariencia</button>
+      </div>
+
+      <section id="tabArticulos">
+        <button class="btn" id="btnNuevo" style="max-width:260px;margin-bottom:10px">+ Nuevo artículo</button>
+        <div id="listaProd"></div>
+      </section>
+
+      <section id="tabPedidos" hidden>
+        <div id="listaPed"></div>
+      </section>
+
+      <section id="tabApariencia" hidden>
+        <form id="temaForm" class="box">
+          <h2>Tema de temporada</h2>
+          <div class="temas" id="temas"></div>
+          <label class="chk"><input type="checkbox" id="mostrarMensaje" checked> Mostrar mensaje en la parte superior de la tienda</label>
+          <label class="f">Mensaje personalizado (opcional)<input id="mensaje" maxlength="120" placeholder="Si lo dejas vacío se usa el mensaje del tema"></label>
+          <button class="btn" type="submit" id="btnTema" style="max-width:260px">Guardar apariencia</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="modal" hidden>
+    <form class="box" id="prodForm" novalidate>
+      <h2 id="modalTitulo">Nuevo artículo</h2>
+
+      <img class="preview" id="preview" alt="" hidden>
+      <label class="foto-btn" for="foto" id="fotoLbl">Tomar foto o elegir de la galería</label>
+      <input type="file" id="foto" accept="image/*" hidden>
+
+      <label class="f">Nombre<input name="nombre" required maxlength="80"></label>
+      <label class="f">Categoría<input name="categoria" list="cats" placeholder="Ej. Cocina" maxlength="40" autocomplete="off"></label>
+      <datalist id="cats"></datalist>
+      <div class="opts">
+        <label class="f">Precio normal<input name="precio" type="number" min="0" step="any" inputmode="decimal" required></label>
+        <label class="f">Cantidad<input name="cantidad" type="number" min="0" step="1" inputmode="numeric" required></label>
+      </div>
+
+      <div class="box" style="background:var(--soft);margin-bottom:12px">
+        <label class="chk"><input type="checkbox" name="oferta"> Artículo en oferta</label>
+        <div id="ofertaCampos" hidden>
+          <label class="f">Precio de oferta<input name="precioOferta" type="number" min="0" step="any" inputmode="decimal"></label>
+          <label class="chk"><input type="checkbox" name="mostrarAhorro" checked> Mostrar sticker con precio normal y de oferta</label>
+          <small style="color:var(--muted)">Si lo desmarcas, el cliente solo ve el precio de oferta.</small>
+        </div>
+      </div>
+
+      <label class="chk"><input type="checkbox" name="activo" checked> Visible en la tienda</label>
+
+      <div class="msg" id="prodError" hidden></div>
+      <div class="opts">
+        <button type="button" class="btn sec" id="btnCancelar">Cancelar</button>
+        <button type="submit" class="btn" id="btnGuardar">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="../js/admin.js"></script>
+</body>
+</html>

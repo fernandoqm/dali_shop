@@ -1,0 +1,301 @@
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {
+  collection, doc, addDoc, setDoc, deleteDoc, updateDoc, writeBatch, increment,
+  query, orderBy, limit, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { auth, db } from "./firebase.js";
+import { $, esc, precio, miniatura, toast } from "./util.js";
+import { enOferta } from "./producto.js";
+import { comprimir, subir } from "./imagen.js";
+import { TEMAS, temaAuto, aplicar } from "./temas.js";
+import { configurado } from "./config.js";
+
+let unsubs = [];
+let productos = [];
+let editando = null;   // producto en edición (null = nuevo)
+let fotoBlob = null;
+
+/* ---------- Sesión ---------- */
+onAuthStateChanged(auth, (user) => {
+  unsubs.forEach((u) => u());
+  unsubs = [];
+  $("#login").hidden = !!user;
+  $("#panel").hidden = !user;
+  if (!user) return;
+  unsubs.push(
+    onSnapshot(collection(db, "productos"), (s) => {
+      productos = s.docs.map((d) => ({ id: d.id, ...d.data() }));
+      productos.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+      pintarProductos();
+    }, errPermiso),
+    onSnapshot(doc(db, "config", "tienda"), (s) => cargarTema(s.exists() ? s.data() : null), errPermiso),
+    onSnapshot(query(collection(db, "pedidos"), orderBy("fecha", "desc"), limit(100)), (s) => {
+      pintarPedidos(s.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, errPermiso)
+  );
+});
+
+function errPermiso(e) {
+  console.error(e);
+  toast("Sin permiso o error de conexión. Revisa las reglas de Firestore.", "err");
+}
+
+$("#loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  $("#loginError").hidden = true;
+  if (!configurado) {
+    $("#loginError").textContent = "Falta configurar Firebase en js/config.js.";
+    $("#loginError").hidden = false;
+    return;
+  }
+  try {
+    await signInWithEmailAndPassword(auth, f.email.value.trim(), f.password.value);
+    f.password.value = "";
+  } catch {
+    $("#loginError").textContent = "Correo o contraseña incorrectos.";
+    $("#loginError").hidden = false;
+  }
+});
+$("#btnSalir").addEventListener("click", () => signOut(auth));
+
+/* ---------- Pestañas ---------- */
+document.querySelectorAll(".atab").forEach((b) =>
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".atab").forEach((x) => x.setAttribute("aria-selected", x === b));
+    $("#tabArticulos").hidden = b.dataset.tab !== "articulos";
+    $("#tabPedidos").hidden = b.dataset.tab !== "pedidos";
+    $("#tabApariencia").hidden = b.dataset.tab !== "apariencia";
+  })
+);
+
+/* ---------- Apariencia (temas de temporada) ---------- */
+const opcionesTema = [
+  ["auto", { nombre: "Automático por fecha", vars: {} }],
+  ...Object.entries(TEMAS)
+];
+$("#temas").innerHTML = opcionesTema
+  .map(([id, t]) => `<label class="tema"><input type="radio" name="tema" value="${esc(id)}">
+    <b>${esc(t.nombre)}</b>
+    <span class="dots">${["--bg", "--brand", "--offer"].map((v) => (t.vars[v] ? `<i style="background:${t.vars[v]}"></i>` : "")).join("")}</span>
+    <small>${id === "auto" ? "Navidad, Halloween y San Valentín según el calendario" : esc(t.saludo || "Sin mensaje")}</small></label>`)
+  .join("");
+
+const temaForm = $("#temaForm");
+temaForm.addEventListener("change", (e) => {
+  if (e.target.name !== "tema") return;
+  // Vista previa inmediata en el panel; no se publica hasta guardar
+  aplicar(e.target.value === "auto" ? temaAuto() : e.target.value);
+});
+
+function cargarTema(cfg) {
+  const id = cfg?.tema || "clasico";
+  const r = temaForm.querySelector(`input[name="tema"][value="${id}"]`);
+  if (r) r.checked = true;
+  $("#mostrarMensaje").checked = cfg?.mostrarMensaje !== false;
+  $("#mensaje").value = cfg?.mensaje || "";
+}
+
+temaForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const tema = temaForm.querySelector('input[name="tema"]:checked')?.value || "clasico";
+  const btn = $("#btnTema");
+  btn.disabled = true;
+  try {
+    await setDoc(doc(db, "config", "tienda"), {
+      tema,
+      mostrarMensaje: $("#mostrarMensaje").checked,
+      mensaje: $("#mensaje").value.trim()
+    });
+    toast("Apariencia guardada");
+  } catch (err) {
+    errPermiso(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------- Artículos ---------- */
+function pintarProductos() {
+  $("#cats").innerHTML = [...new Set(productos.map((p) => (p.categoria || "").trim()).filter(Boolean))]
+    .map((c) => `<option value="${esc(c)}">`).join("");
+  $("#listaProd").innerHTML = productos.length
+    ? productos
+        .map((p) => {
+          const stock = Number(p.cantidad) || 0;
+          return `<div class="item" data-id="${esc(p.id)}">
+        ${p.imagen ? `<img src="${esc(miniatura(p.imagen, 120))}" alt="">` : `<div class="noimg"></div>`}
+        <div>
+          <div class="t">${esc(p.nombre)}${enOferta(p) ? `<span class="pill of">Oferta</span>` : ""}${p.activo ? "" : `<span class="pill off">Oculto</span>`}</div>
+          <div class="s">${esc(p.categoria || "Sin categoría")} · ${enOferta(p) ? `<s>${esc(precio(p.precio))}</s> <b>${esc(precio(p.precioOferta))}</b>` : esc(precio(p.precio))} ·
+            <span style="${stock <= 0 ? "color:var(--warn);font-weight:600" : ""}">${stock <= 0 ? "Agotado" : `Stock ${stock}`}</span></div>
+        </div>
+        <div style="display:flex;gap:6px"><button class="ibtn" data-a="editar">Editar</button><button class="ibtn" data-a="borrar" aria-label="Eliminar">🗑</button></div>
+      </div>`;
+        })
+        .join("")
+    : `<p class="vacio">Todavía no hay artículos. Crea el primero.</p>`;
+}
+
+$("#listaProd").addEventListener("click", async (e) => {
+  const a = e.target.closest("[data-a]");
+  const row = e.target.closest(".item");
+  if (!a || !row) return;
+  const p = productos.find((x) => x.id === row.dataset.id);
+  if (a.dataset.a === "editar") abrirModal(p);
+  if (a.dataset.a === "borrar" && confirm(`¿Eliminar "${p.nombre}"? No se puede deshacer.`)) {
+    try {
+      await deleteDoc(doc(db, "productos", p.id));
+      toast("Artículo eliminado");
+    } catch (err) {
+      errPermiso(err);
+    }
+  }
+});
+
+const form = $("#prodForm");
+const syncOferta = () => ($("#ofertaCampos").hidden = !form.oferta.checked);
+form.oferta.addEventListener("change", syncOferta);
+
+function abrirModal(p = null) {
+  editando = p;
+  fotoBlob = null;
+  form.reset();
+  $("#prodError").hidden = true;
+  $("#modalTitulo").textContent = p ? "Editar artículo" : "Nuevo artículo";
+  if (p) {
+    form.nombre.value = p.nombre || "";
+    form.categoria.value = p.categoria || "";
+    form.precio.value = p.precio ?? "";
+    form.cantidad.value = p.cantidad ?? 0;
+    form.oferta.checked = !!p.oferta;
+    form.precioOferta.value = p.precioOferta ?? "";
+    form.mostrarAhorro.checked = p.mostrarAhorro !== false;
+    form.activo.checked = p.activo !== false;
+  }
+  verPreview(p?.imagen ? miniatura(p.imagen, 600) : "");
+  syncOferta();
+  $("#modal").hidden = false;
+}
+
+function verPreview(src) {
+  $("#preview").hidden = !src;
+  if (src) $("#preview").src = src;
+  $("#fotoLbl").textContent = src ? "Cambiar foto" : "Tomar foto o elegir de la galería";
+}
+
+const cerrarModal = () => ($("#modal").hidden = true);
+$("#btnNuevo").addEventListener("click", () => abrirModal());
+$("#btnCancelar").addEventListener("click", cerrarModal);
+
+$("#foto").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    fotoBlob = await comprimir(file);
+    verPreview(URL.createObjectURL(fotoBlob));
+    $("#fotoLbl").textContent = `Cambiar foto (${Math.round(fotoBlob.size / 1024)} KB)`;
+  } catch {
+    toast("No se pudo procesar la imagen", "err");
+  }
+  e.target.value = "";
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = (m) => {
+    $("#prodError").textContent = m;
+    $("#prodError").hidden = !m;
+  };
+  err("");
+
+  const nombre = form.nombre.value.trim();
+  const precioN = Number(form.precio.value);
+  const cantidad = Math.floor(Number(form.cantidad.value));
+  const oferta = form.oferta.checked;
+  const precioOferta = Number(form.precioOferta.value) || 0;
+  if (!nombre) return err("Escribe el nombre.");
+  if (!(precioN >= 0) || form.precio.value === "") return err("Escribe el precio.");
+  if (!(cantidad >= 0)) return err("Escribe la cantidad (0 si no hay).");
+  if (oferta && !(precioOferta > 0 && precioOferta < precioN)) return err("El precio de oferta debe ser mayor que 0 y menor que el precio normal.");
+  if (!editando?.imagen && !fotoBlob) return err("Agrega una foto del artículo.");
+
+  const btn = $("#btnGuardar");
+  btn.disabled = true;
+  btn.textContent = "Guardando…";
+  try {
+    let imagen = editando?.imagen || "";
+    if (fotoBlob) imagen = await subir(fotoBlob);
+
+    const datos = {
+      nombre,
+      categoria: form.categoria.value.trim(),
+      precio: precioN,
+      cantidad,
+      imagen,
+      activo: form.activo.checked,
+      oferta,
+      precioOferta: oferta ? precioOferta : 0,
+      mostrarAhorro: form.mostrarAhorro.checked
+    };
+    if (editando) await updateDoc(doc(db, "productos", editando.id), datos);
+    else await addDoc(collection(db, "productos"), { ...datos, fecha: serverTimestamp() });
+    toast("Guardado");
+    cerrarModal();
+  } catch (ex) {
+    console.error(ex);
+    err(ex.message || "No se pudo guardar. Intenta de nuevo.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Guardar";
+  }
+});
+
+/* ---------- Pedidos ---------- */
+const ESTADOS = ["nuevo", "preparando", "listo", "entregado", "cancelado"];
+
+function pintarPedidos(peds) {
+  const nuevos = peds.filter((p) => p.estado === "nuevo").length;
+  $("#nuevos").textContent = nuevos;
+  $("#nuevos").hidden = !nuevos;
+  $("#listaPed").innerHTML = peds.length
+    ? peds
+        .map((p) => {
+          const f = p.fecha?.toDate ? p.fecha.toDate().toLocaleString("es", { dateStyle: "short", timeStyle: "short" }) : "";
+          return `<div class="pedido" data-id="${esc(p.id)}">
+        <div class="h"><span>#${esc(p.codigo)} · ${esc(p.cliente?.nombre)}</span><span class="est ${esc(p.estado)}">${esc(p.estado)}</span></div>
+        <div class="d">${esc(f)} · ${p.tipo === "envio" ? "Envío" : "Recoge en tienda"} · <a href="tel:${esc(p.cliente?.telefono)}">${esc(p.cliente?.telefono)}</a>
+          ${p.direccion ? `<br>${esc(p.direccion)}` : ""}${p.notas ? `<br><i>${esc(p.notas)}</i>` : ""}</div>
+        <ul>${(p.items || []).map((i) => `<li>${esc(i.cant)} × ${esc(i.nombre)} — ${esc(precio(i.precio * i.cant))}</li>`).join("")}</ul>
+        <div class="row"><b>Total ${esc(precio(p.total))}</b>
+          <select data-est aria-label="Cambiar estado">${ESTADOS.map((s) => `<option ${s === p.estado ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+      </div>`;
+        })
+        .join("")
+    : `<p class="vacio">Aún no hay pedidos.</p>`;
+  window.__peds = peds;
+}
+
+$("#listaPed").addEventListener("change", async (e) => {
+  const sel = e.target.closest("[data-est]");
+  if (!sel) return;
+  const id = sel.closest(".pedido").dataset.id;
+  const ped = (window.__peds || []).find((p) => p.id === id);
+  const estado = sel.value;
+  try {
+    // Al cancelar se devuelven las existencias (una sola vez)
+    if (estado === "cancelado" && !ped.repuesto) {
+      const b = writeBatch(db);
+      (ped.items || []).forEach((i) => b.update(doc(db, "productos", i.id), { cantidad: increment(i.cant) }));
+      b.update(doc(db, "pedidos", id), { estado, repuesto: true });
+      await b.commit();
+      toast("Pedido cancelado y existencias devueltas");
+    } else {
+      await updateDoc(doc(db, "pedidos", id), { estado });
+      toast("Estado actualizado");
+    }
+  } catch (err) {
+    sel.value = ped.estado;
+    errPermiso(err);
+  }
+});

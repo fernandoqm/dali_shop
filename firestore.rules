@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Administradores ----------
+    // Correos autorizados (en minúsculas). Agrega más separados por coma.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() in ['fernando.quesadam@gmail.com'];
+    }
+
+    // ---------- Validaciones ----------
+    function esTexto(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    function productoValido(d) {
+      return d.keys().hasOnly(['nombre','categoria','precio','cantidad','imagen','activo','oferta','precioOferta','mostrarAhorro','fecha'])
+        && d.keys().hasAll(['nombre','precio','cantidad','activo'])
+        && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 80
+        && esTexto(d.get('categoria', ''), 40)
+        && d.precio is number && d.precio >= 0
+        && d.cantidad is int && d.cantidad >= 0
+        && esTexto(d.get('imagen', ''), 500)
+        && d.activo is bool
+        && d.get('oferta', false) is bool
+        && d.get('precioOferta', 0) is number && d.get('precioOferta', 0) >= 0
+        && d.get('mostrarAhorro', true) is bool;
+    }
+
+    function pedidoValido(d) {
+      return d.keys().hasOnly(['codigo','cliente','tipo','direccion','notas','items','subtotal','costoEnvio','total','estado','fecha'])
+        && d.keys().hasAll(['codigo','cliente','tipo','items','subtotal','total','estado','fecha'])
+        && d.codigo is string && d.codigo.size() >= 4 && d.codigo.size() <= 12
+        && d.cliente is map
+        && d.cliente.keys().hasOnly(['nombre','telefono'])
+        && d.cliente.nombre is string && d.cliente.nombre.size() > 0 && d.cliente.nombre.size() <= 80
+        && d.cliente.telefono is string && d.cliente.telefono.size() >= 7 && d.cliente.telefono.size() <= 25
+        && d.tipo in ['recoger', 'envio']
+        && esTexto(d.get('direccion', ''), 300)
+        && (d.tipo == 'recoger' || d.get('direccion', '').size() > 0)
+        && esTexto(d.get('notas', ''), 300)
+        && d.items is list && d.items.size() > 0 && d.items.size() <= 50
+        && d.subtotal is number && d.subtotal >= 0
+        && d.get('costoEnvio', 0) is number && d.get('costoEnvio', 0) >= 0
+        && d.total is number && d.total == d.subtotal + d.get('costoEnvio', 0)
+        && d.estado == 'nuevo'
+        && d.fecha == request.time;
+    }
+
+    // ---------- Productos ----------
+    match /productos/{id} {
+      // El catálogo es público
+      allow read: if true;
+
+      // Solo el administrador crea, edita o borra artículos
+      allow create: if isAdmin() && productoValido(request.resource.data);
+      allow delete: if isAdmin();
+
+      allow update: if
+        // Administrador: edición completa
+        (isAdmin() && productoValido(request.resource.data))
+        // Cliente: únicamente puede DESCONTAR existencias al hacer un pedido
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cantidad'])
+          && request.resource.data.cantidad is int
+          && request.resource.data.cantidad >= 0
+          && request.resource.data.cantidad < resource.data.cantidad
+        );
+    }
+
+    // ---------- Pedidos ----------
+    match /pedidos/{id} {
+      // Cualquier cliente puede crear un pedido válido; nadie más que el admin puede verlo
+      allow create: if pedidoValido(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- Configuración de la tienda (tema, mensaje) ----------
+    match /config/{id} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['tema','mostrarMensaje','mensaje'])
+        && request.resource.data.tema is string && request.resource.data.tema.size() <= 30
+        && request.resource.data.get('mostrarMensaje', true) is bool
+        && esTexto(request.resource.data.get('mensaje', ''), 120);
+    }
+
+    // ---------- Todo lo demás, bloqueado ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

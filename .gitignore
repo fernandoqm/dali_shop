@@ -1,0 +1,36 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno y secretos (la config web de Firebase/Cloudinary en js/config.js es pública y SÍ se sube)
+.env
+.env.*
+*.pem
+*.key
+serviceAccount*.json
+*-adminsdk-*.json
+
+# Firebase local
+.firebase/
+firebase-debug.log*
+firebase-debug.*.log
+.firebaserc
+
+# Claude Code / herramientas locales
+.claude/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.suo
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak
+tmp/
