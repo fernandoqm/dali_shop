@@ -111,9 +111,12 @@
     <form class="box" id="prodForm" novalidate>
       <h2 id="modalTitulo">Nuevo artículo</h2>
 
-      <img class="preview" id="preview" alt="" hidden>
-      <label class="foto-btn" for="foto" id="fotoLbl">Tomar foto o elegir de la galería (opcional)</label>
-      <input type="file" id="foto" accept="image/*" hidden>
+      <div class="fotos-admin">
+        <div class="fotos-grid" id="fotosGrid"></div>
+        <label class="foto-btn" for="foto" id="fotoLbl">Tomar o elegir fotos (hasta 6, opcional)</label>
+        <input type="file" id="foto" accept="image/*" multiple hidden>
+        <small class="ayuda">La primera foto es la portada del catálogo. Usa las flechas para cambiar el orden.</small>
+      </div>
 
       <label class="f">Nombre<input name="nombre" required maxlength="80"></label>
       <label class="f">Categoría<select name="categoria" id="selCat"></select></label>

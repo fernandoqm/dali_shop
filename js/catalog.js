@@ -205,6 +205,63 @@ let enDetalle = null;
 let cantDetalle = 1;
 
 $("#detCerrar").innerHTML = ICONOS.cerrar;
+$("#visorCerrar").innerHTML = ICONOS.cerrar;
+
+/* ---------- Galería de fotos ---------- */
+const fotosDe = (p) => (Array.isArray(p.imagenes) && p.imagenes.length ? p.imagenes : p.imagen ? [p.imagen] : []);
+let galFotos = [];
+const indice = (el) => Math.round(el.scrollLeft / (el.clientWidth || 1));
+const irA = (el, i) => el.scrollTo({ left: Math.max(0, Math.min(galFotos.length - 1, i)) * el.clientWidth, behavior: "smooth" });
+
+function pintarGaleria(p) {
+  galFotos = fotosDe(p);
+  const lista = galFotos.length ? galFotos : [""];
+  $("#detGaleria").innerHTML = lista
+    .map(
+      (u, i) => `<button class="gal-item" type="button" data-i="${i}" aria-label="Ver foto ${i + 1} en grande">
+        <img src="${esc(fotoUrl(u, 900))}" alt="${esc(p.nombre)}" ${i ? 'loading="lazy"' : ""}></button>`
+    )
+    .join("");
+  $("#detGaleria").scrollLeft = 0;
+  const varias = galFotos.length > 1;
+  $("#detDots").innerHTML = varias ? galFotos.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("") : "";
+  $("#detDots").hidden = !varias;
+  $("#galPrev").hidden = !varias;
+  $("#galNext").hidden = !varias;
+}
+
+$("#detGaleria").addEventListener("scroll", () => {
+  const i = indice($("#detGaleria"));
+  [...$("#detDots").children].forEach((d, k) => d.classList.toggle("on", k === i));
+});
+$("#galPrev").addEventListener("click", () => irA($("#detGaleria"), indice($("#detGaleria")) - 1));
+$("#galNext").addEventListener("click", () => irA($("#detGaleria"), indice($("#detGaleria")) + 1));
+$("#detGaleria").addEventListener("click", (e) => {
+  const b = e.target.closest(".gal-item");
+  if (b && galFotos.length) abrirVisor(Number(b.dataset.i));
+});
+
+// Visor a pantalla completa (deslizable; en celular se puede ampliar con los dedos)
+function abrirVisor(i) {
+  $("#visorPista").innerHTML = galFotos.map((u) => `<div class="visor-item"><img src="${esc(fotoUrl(u, 1600))}" alt=""></div>`).join("");
+  const varias = galFotos.length > 1;
+  $("#visorPrev").hidden = !varias;
+  $("#visorNext").hidden = !varias;
+  $("#visor").hidden = false;
+  requestAnimationFrame(() => {
+    const v = $("#visorPista");
+    v.scrollLeft = i * v.clientWidth;
+    contarVisor();
+  });
+}
+function contarVisor() {
+  $("#visorN").textContent = galFotos.length > 1 ? `${indice($("#visorPista")) + 1} / ${galFotos.length}` : "";
+}
+const cerrarVisor = () => ($("#visor").hidden = true);
+$("#visorPista").addEventListener("scroll", contarVisor);
+$("#visorPrev").addEventListener("click", () => irA($("#visorPista"), indice($("#visorPista")) - 1));
+$("#visorNext").addEventListener("click", () => irA($("#visorPista"), indice($("#visorPista")) + 1));
+$("#visorCerrar").addEventListener("click", cerrarVisor);
 $("#btnClose").innerHTML = ICONOS.cerrar;
 
 function bloquear() {
@@ -223,8 +280,7 @@ function pintarCantidad() {
 function abrirDetalle(p) {
   enDetalle = p;
   cantDetalle = 1;
-  $("#detImg").src = fotoUrl(p.imagen, 900);
-  $("#detImg").alt = p.nombre;
+  pintarGaleria(p);
   $("#detCat").textContent = p.categoria || "";
   $("#detCat").hidden = !p.categoria;
   $("#detNombre").textContent = p.nombre;
@@ -254,6 +310,7 @@ function abrirDetalle(p) {
 }
 
 function cerrarDetalle() {
+  cerrarVisor();
   try {
     history.replaceState(null, "", location.pathname);
   } catch {}
@@ -405,6 +462,12 @@ $("#cartBody").addEventListener("click", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
+  if (!$("#visor").hidden) {
+    if (e.key === "Escape") cerrarVisor();
+    else if (e.key === "ArrowLeft") irA($("#visorPista"), indice($("#visorPista")) - 1);
+    else if (e.key === "ArrowRight") irA($("#visorPista"), indice($("#visorPista")) + 1);
+    return;
+  }
   if (e.key !== "Escape") return;
   if (!$("#detalle").hidden) cerrarDetalle();
   else if (!$("#drawer").hidden) abrirCarrito(false);

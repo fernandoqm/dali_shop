@@ -372,3 +372,38 @@ label.f input:focus,label.f select:focus,label.f textarea:focus{outline:0;border
 
 /* Aviso de retiro (sin tienda física) */
 .aviso-retiro{background:var(--soft);border-color:var(--tint);color:var(--brand-d)}
+
+/* Galería de fotos en la ficha */
+.galeria{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.galeria::-webkit-scrollbar{display:none}
+.gal-item{flex:0 0 100%;padding:0;border:0;background:none;scroll-snap-align:start;cursor:zoom-in}
+.gal-dots{position:absolute;left:0;right:0;bottom:14px;z-index:1;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.gal-dots i{width:7px;height:7px;border-radius:999px;background:rgba(255,255,255,.65);box-shadow:0 0 0 1px rgba(0,0,0,.15);transition:width .2s}
+.gal-dots i.on{width:20px;background:#fff}
+.gal-nav{position:absolute;top:50%;z-index:2;transform:translateY(-50%);width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(255,255,255,.92);color:#1d2427;font-size:26px;line-height:1;cursor:pointer;box-shadow:var(--shadow-sm)}
+.gal-prev{left:12px}
+.gal-next{right:12px}
+@media (hover:none){.sheet-img .gal-nav{display:none}}
+
+/* Visor a pantalla completa */
+.visor{position:fixed;inset:0;z-index:80;display:flex;align-items:center;background:rgba(5,8,10,.96);animation:aparece .2s ease}
+.visor-pista{display:flex;width:100%;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.visor-pista::-webkit-scrollbar{display:none}
+.visor-item{flex:0 0 100%;display:grid;place-items:center;padding:64px 12px calc(24px + env(safe-area-inset-bottom));scroll-snap-align:start}
+.visor-item img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.visor-n{position:absolute;top:calc(24px + env(safe-area-inset-top));left:50%;z-index:2;transform:translateX(-50%);color:#fff;font-size:14px;font-weight:600}
+.visor .cerrar{top:calc(14px + env(safe-area-inset-top))}
+
+/* Fotos en el admin */
+.fotos-admin{margin-bottom:14px}
+.fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-bottom:10px}
+.fotos-grid:empty{display:none}
+.foto-item{position:relative;border-radius:12px;overflow:hidden;background:var(--soft);aspect-ratio:1}
+.foto-item img{width:100%;height:100%;object-fit:cover}
+.portada{position:absolute;top:6px;left:6px;padding:2px 8px;border-radius:999px;background:var(--brand);color:#fff;font-size:10px;font-weight:700}
+.foto-acc{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;padding:4px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.foto-acc button{width:28px;height:28px;border:0;border-radius:8px;background:rgba(255,255,255,.92);font-size:12px;cursor:pointer}
+.foto-acc button[disabled]{opacity:.35;cursor:default}
+.foto-acc button[data-f="quitar"]{color:var(--warn);font-weight:700}
+.fotos-admin .foto-btn{margin-bottom:6px}
+.ayuda{display:block;color:var(--muted);font-size:12px}

@@ -13,7 +13,8 @@ import { configurado, tienda } from "./config.js";
 let unsubs = [];
 let productos = [];
 let editando = null;   // producto en edición (null = nuevo)
-let fotoBlob = null;
+let fotos = [];       // fotos del artículo en edición: {url} ya subidas o {blob, prev} nuevas
+const MAX_FOTOS = 6;
 let config = {};      // documento config/tienda
 let pedidos = [];
 
@@ -301,7 +302,7 @@ form.oferta.addEventListener("change", syncOferta);
 
 function abrirModal(p = null) {
   editando = p;
-  fotoBlob = null;
+  fotos = fotosDe(p).map((url) => ({ url }));
   form.reset();
   llenarSelectCategorias(p?.categoria || "");
   $("#prodError").hidden = true;
@@ -317,32 +318,68 @@ function abrirModal(p = null) {
     form.descripcion.value = p.descripcion || "";
     form.destacado.checked = !!p.destacado;
   }
-  verPreview(p?.imagen ? miniatura(p.imagen, 600) : "");
+  pintarFotos();
   syncOferta();
   $("#modal").hidden = false;
 }
 
-function verPreview(src) {
-  $("#preview").hidden = !src;
-  if (src) $("#preview").src = src;
-  $("#fotoLbl").textContent = src ? "Cambiar foto" : "Tomar foto o elegir de la galería (opcional)";
+// Todas las fotos de un artículo (compatible con artículos antiguos de una sola foto)
+function fotosDe(p) {
+  if (Array.isArray(p?.imagenes) && p.imagenes.length) return [...p.imagenes];
+  return p?.imagen ? [p.imagen] : [];
 }
+
+function pintarFotos() {
+  $("#fotosGrid").innerHTML = fotos
+    .map(
+      (f, i) => `<div class="foto-item" data-i="${i}">
+        <img src="${esc(f.url ? miniatura(f.url, 300) : f.prev)}" alt="">
+        ${i === 0 ? `<span class="portada">Portada</span>` : ""}
+        <div class="foto-acc">
+          <button type="button" data-f="izq" aria-label="Mover a la izquierda" ${i === 0 ? "disabled" : ""}>◀</button>
+          <button type="button" data-f="der" aria-label="Mover a la derecha" ${i === fotos.length - 1 ? "disabled" : ""}>▶</button>
+          <button type="button" data-f="quitar" aria-label="Quitar foto">✕</button>
+        </div>
+      </div>`
+    )
+    .join("");
+  $("#fotoLbl").hidden = fotos.length >= MAX_FOTOS;
+  $("#fotoLbl").textContent = fotos.length ? `Agregar más fotos (${fotos.length} de ${MAX_FOTOS})` : "Tomar o elegir fotos (hasta 6, opcional)";
+}
+
+$("#fotosGrid").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-f]");
+  if (!b) return;
+  const i = Number(b.closest(".foto-item").dataset.i);
+  if (b.dataset.f === "quitar") fotos.splice(i, 1);
+  else {
+    const j = b.dataset.f === "izq" ? i - 1 : i + 1;
+    [fotos[i], fotos[j]] = [fotos[j], fotos[i]];
+  }
+  pintarFotos();
+});
 
 const cerrarModal = () => ($("#modal").hidden = true);
 $("#btnNuevo").addEventListener("click", () => abrirModal());
 $("#btnCancelar").addEventListener("click", cerrarModal);
 
 $("#foto").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    fotoBlob = await comprimir(file);
-    verPreview(URL.createObjectURL(fotoBlob));
-    $("#fotoLbl").textContent = `Cambiar foto (${Math.round(fotoBlob.size / 1024)} KB)`;
-  } catch {
-    toast("No se pudo procesar la imagen", "err");
-  }
+  const archivos = [...e.target.files];
   e.target.value = "";
+  const libres = MAX_FOTOS - fotos.length;
+  if (archivos.length > libres) toast(`Solo se agregan ${libres} foto${libres === 1 ? "" : "s"} más (máximo ${MAX_FOTOS})`, "err");
+  const lote = archivos.slice(0, libres);
+  if (!lote.length) return;
+  $("#fotoLbl").textContent = "Procesando fotos…";
+  for (const file of lote) {
+    try {
+      const blob = await comprimir(file);
+      fotos.push({ blob, prev: URL.createObjectURL(blob) });
+    } catch {
+      toast("No se pudo procesar una de las imágenes", "err");
+    }
+  }
+  pintarFotos();
 });
 
 form.addEventListener("submit", async (e) => {
@@ -367,8 +404,16 @@ form.addEventListener("submit", async (e) => {
   btn.disabled = true;
   btn.textContent = "Guardando…";
   try {
-    let imagen = editando?.imagen || "";
-    if (fotoBlob) imagen = await subir(fotoBlob);
+    // Sube solo las fotos nuevas, en el orden elegido
+    const imagenes = [];
+    for (const [k, f] of fotos.entries()) {
+      if (!f.url) {
+        btn.textContent = `Subiendo foto ${k + 1} de ${fotos.length}…`;
+        f.url = await subir(f.blob);
+      }
+      imagenes.push(f.url);
+    }
+    const imagen = imagenes[0] || "";
 
     const datos = {
       nombre,
@@ -376,6 +421,7 @@ form.addEventListener("submit", async (e) => {
       precio: precioN,
       cantidad,
       imagen,
+      imagenes,
       activo: form.activo.checked,
       oferta,
       precioOferta: oferta ? precioOferta : 0,

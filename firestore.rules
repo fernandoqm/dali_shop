@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function productoValido(d) {
-      return d.keys().hasOnly(['nombre','categoria','precio','cantidad','imagen','activo','oferta','precioOferta','mostrarAhorro','fecha','descripcion','destacado'])
+      return d.keys().hasOnly(['nombre','categoria','precio','cantidad','imagen','activo','oferta','precioOferta','mostrarAhorro','fecha','descripcion','destacado','imagenes'])
         && d.keys().hasAll(['nombre','precio','cantidad','activo'])
         && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 80
         && esTexto(d.get('categoria', ''), 40)
@@ -28,7 +28,9 @@ service cloud.firestore {
         && d.get('precioOferta', 0) is number && d.get('precioOferta', 0) >= 0
         && d.get('mostrarAhorro', true) is bool
         && esTexto(d.get('descripcion', ''), 600)
-        && d.get('destacado', false) is bool;
+        && d.get('destacado', false) is bool
+        && d.get('imagenes', []) is list
+        && d.get('imagenes', []).size() <= 6;
     }
 
     function pedidoValido(d) {

@@ -92,8 +92,11 @@
   <section class="sheet" id="detalle" role="dialog" aria-modal="true" aria-labelledby="detNombre" hidden>
     <button class="cerrar" id="detCerrar" aria-label="Cerrar"></button>
     <div class="sheet-img">
-      <img id="detImg" alt="">
+      <div class="galeria" id="detGaleria"></div>
       <span class="sticker" id="detSticker" hidden></span>
+      <button class="gal-nav gal-prev" id="galPrev" type="button" aria-label="Foto anterior" hidden>‹</button>
+      <button class="gal-nav gal-next" id="galNext" type="button" aria-label="Foto siguiente" hidden>›</button>
+      <div class="gal-dots" id="detDots" hidden></div>
     </div>
     <div class="sheet-info">
       <span class="cat" id="detCat"></span>
@@ -119,6 +122,15 @@
       </div>
     </div>
   </section>
+
+  <!-- Visor de fotos a pantalla completa -->
+  <div class="visor" id="visor" role="dialog" aria-modal="true" aria-label="Fotos del artículo" hidden>
+    <button class="cerrar" id="visorCerrar" type="button" aria-label="Cerrar"></button>
+    <span class="visor-n" id="visorN"></span>
+    <div class="visor-pista" id="visorPista"></div>
+    <button class="gal-nav gal-prev" id="visorPrev" type="button" aria-label="Foto anterior">‹</button>
+    <button class="gal-nav gal-next" id="visorNext" type="button" aria-label="Foto siguiente">›</button>
+  </div>
 
   <!-- Carrito -->
   <div class="overlay" id="overlay" hidden></div>
