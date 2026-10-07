@@ -35,6 +35,7 @@
     <main class="wrap" style="padding-top:14px;padding-bottom:60px">
       <div class="atabs" role="tablist">
         <button class="atab" role="tab" data-tab="articulos" aria-selected="true">Artículos</button>
+        <button class="atab" role="tab" data-tab="categorias" aria-selected="false">Categorías</button>
         <button class="atab" role="tab" data-tab="pedidos" aria-selected="false">Pedidos <span class="badge" id="nuevos" hidden>0</span></button>
         <button class="atab" role="tab" data-tab="apariencia" aria-selected="false">Apariencia</button>
         <button class="atab" role="tab" data-tab="ajustes" aria-selected="false">Ajustes</button>
@@ -43,6 +44,18 @@
       <section id="tabArticulos">
         <button class="btn" id="btnNuevo" style="max-width:260px;margin-bottom:10px">+ Nuevo artículo</button>
         <div id="listaProd"></div>
+      </section>
+
+      <section id="tabCategorias" hidden>
+        <div class="box">
+          <h2>Categorías de la tienda</h2>
+          <p style="color:var(--muted);margin-top:0;font-size:14px">Cada categoría es una pestaña del catálogo, en este orden. Solo se muestran las que tienen artículos visibles.</p>
+          <form id="catForm" style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="catNombre" maxlength="40" placeholder="Nueva categoría (ej. Cocina)" required style="flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--card);color:var(--ink)">
+            <button class="btn" type="submit" style="width:auto;padding:10px 18px">Agregar</button>
+          </form>
+          <div id="listaCats"></div>
+        </div>
       </section>
 
       <section id="tabPedidos" hidden>
@@ -94,12 +107,11 @@
       <h2 id="modalTitulo">Nuevo artículo</h2>
 
       <img class="preview" id="preview" alt="" hidden>
-      <label class="foto-btn" for="foto" id="fotoLbl">Tomar foto o elegir de la galería</label>
+      <label class="foto-btn" for="foto" id="fotoLbl">Tomar foto o elegir de la galería (opcional)</label>
       <input type="file" id="foto" accept="image/*" hidden>
 
       <label class="f">Nombre<input name="nombre" required maxlength="80"></label>
-      <label class="f">Categoría<input name="categoria" list="cats" placeholder="Ej. Cocina" maxlength="40" autocomplete="off"></label>
-      <datalist id="cats"></datalist>
+      <label class="f">Categoría<select name="categoria" id="selCat"></select></label>
       <div class="opts">
         <label class="f">Precio normal<input name="precio" type="number" min="0" step="any" inputmode="decimal" required></label>
         <label class="f">Cantidad<input name="cantidad" type="number" min="0" step="1" inputmode="numeric" required></label>

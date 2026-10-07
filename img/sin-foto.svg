@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Foto próximamente">
+  <rect width="400" height="400" fill="#e8f5f6"/>
+  <g fill="none" stroke="#0a7c86" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".85">
+    <path d="M120 190 200 124l80 66"/>
+    <path d="M136 176v90a8 8 0 0 0 8 8h112a8 8 0 0 0 8-8v-90"/>
+    <path d="M180 274v-52h40v52"/>
+  </g>
+  <text x="200" y="332" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="26" font-weight="600" fill="#0a7c86">Foto próximamente</text>
+</svg>

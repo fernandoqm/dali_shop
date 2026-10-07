@@ -4,7 +4,7 @@ import {
   query, orderBy, limit, onSnapshot, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { auth, db } from "./firebase.js";
-import { $, esc, precio, miniatura, toast } from "./util.js";
+import { $, esc, precio, miniatura, fotoUrl, toast } from "./util.js";
 import { enOferta } from "./producto.js";
 import { comprimir, subir } from "./imagen.js";
 import { listarTemas, temaAuto, aplicarTema } from "./temas.js";
@@ -34,6 +34,7 @@ onAuthStateChanged(auth, (user) => {
       config = s.exists() ? s.data() : {};
       cargarTema(config);
       cargarAjustes(config);
+      pintarCategorias();
       pintarPedidos();
     }, errPermiso),
     onSnapshot(query(collection(db, "pedidos"), orderBy("fecha", "desc"), limit(200)), (s) => {
@@ -72,6 +73,7 @@ document.querySelectorAll(".atab").forEach((b) =>
   b.addEventListener("click", () => {
     document.querySelectorAll(".atab").forEach((x) => x.setAttribute("aria-selected", x === b));
     $("#tabArticulos").hidden = b.dataset.tab !== "articulos";
+    $("#tabCategorias").hidden = b.dataset.tab !== "categorias";
     $("#tabPedidos").hidden = b.dataset.tab !== "pedidos";
     $("#tabApariencia").hidden = b.dataset.tab !== "apariencia";
     $("#tabAjustes").hidden = b.dataset.tab !== "ajustes";
@@ -129,16 +131,142 @@ temaForm.addEventListener("submit", async (e) => {
   }
 });
 
+/* ---------- Categorías (son las pestañas del catálogo) ---------- */
+const normCat = (t) => String(t || "").trim().replace(/\s+/g, " ").slice(0, 40);
+const mismaCat = (a, b) => normCat(a).toLowerCase() === normCat(b).toLowerCase();
+
+// Lista de trabajo: las guardadas (en orden) y las que solo existen escritas en algún artículo
+function listaCats() {
+  const base = [];
+  for (const c of config.categorias || []) if (normCat(c) && !base.some((b) => mismaCat(b, c))) base.push(normCat(c));
+  const extras = [...new Set(productos.map((p) => normCat(p.categoria)).filter(Boolean))]
+    .filter((c) => !base.some((b) => mismaCat(b, c)))
+    .sort((a, b) => a.localeCompare(b, "es"));
+  return [...base, ...extras];
+}
+
+const cuantos = (c) => productos.filter((p) => mismaCat(p.categoria, c)).length;
+let catPrevia = "";
+
+function llenarSelectCategorias(actual = "") {
+  const sel = $("#selCat");
+  const lista = listaCats();
+  const act = normCat(actual);
+  if (act && !lista.some((c) => mismaCat(c, act))) lista.push(act);
+  sel.innerHTML =
+    `<option value="">Sin categoría</option>` +
+    lista.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("") +
+    `<option value="__nueva">+ Nueva categoría…</option>`;
+  sel.value = act ? lista.find((c) => mismaCat(c, act)) : "";
+  catPrevia = sel.value;
+}
+
+function pintarCategorias() {
+  const lista = listaCats();
+  const guardadas = (config.categorias || []).map(normCat);
+  $("#listaCats").innerHTML = lista.length
+    ? lista.map((c, i) => `<div class="item" data-i="${i}" style="grid-template-columns:1fr auto">
+        <div><div class="t">${esc(c)}</div>
+          <div class="s">${cuantos(c)} artículo${cuantos(c) === 1 ? "" : "s"}${guardadas.some((g) => mismaCat(g, c)) ? "" : " · aún no está en la lista"}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="ibtn" data-a="sube" aria-label="Subir" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="ibtn" data-a="baja" aria-label="Bajar" ${i === lista.length - 1 ? "disabled" : ""}>↓</button>
+          <button class="ibtn" data-a="renombrar">Renombrar</button>
+          <button class="ibtn" data-a="borrar" aria-label="Eliminar">🗑</button>
+        </div></div>`).join("")
+    : `<p class="vacio" style="padding:20px 0">Aún no hay categorías. Agrega la primera arriba.</p>`;
+}
+
+async function agregarCategoria(nombre) {
+  const n = normCat(nombre);
+  if (!n) return false;
+  const lista = listaCats();
+  if (lista.some((c) => mismaCat(c, n))) {
+    toast("Esa categoría ya existe", "err");
+    return false;
+  }
+  if (lista.length >= 30) {
+    toast("Máximo 30 categorías", "err");
+    return false;
+  }
+  await guardarConfig({ categorias: [...lista, n] }, "Categoría agregada");
+  return true;
+}
+
+$("#catForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (await agregarCategoria($("#catNombre").value)) e.target.reset();
+});
+
+$("#listaCats").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-a]");
+  const row = e.target.closest("[data-i]");
+  if (!b || !row) return;
+  const lista = listaCats();
+  const i = Number(row.dataset.i);
+  const c = lista[i];
+  const accion = b.dataset.a;
+  try {
+    if (accion === "sube" || accion === "baja") {
+      const j = accion === "sube" ? i - 1 : i + 1;
+      [lista[i], lista[j]] = [lista[j], lista[i]];
+      await guardarConfig({ categorias: lista }, "Orden guardado");
+    } else if (accion === "renombrar") {
+      const nuevo = normCat(prompt("Nuevo nombre de la categoría", c));
+      if (!nuevo || nuevo === c) return;
+      if (lista.some((x, k) => k !== i && mismaCat(x, nuevo))) return toast("Ya existe una categoría con ese nombre", "err");
+      const lote = writeBatch(db);
+      productos.filter((p) => mismaCat(p.categoria, c)).forEach((p) => lote.update(doc(db, "productos", p.id), { categoria: nuevo }));
+      lista[i] = nuevo;
+      lote.set(doc(db, "config", "tienda"), { categorias: lista }, { merge: true });
+      await lote.commit();
+      toast("Categoría renombrada");
+    } else if (accion === "borrar") {
+      const n = cuantos(c);
+      const aviso = n
+        ? `¿Eliminar "${c}"? Sus ${n} artículo${n === 1 ? "" : "s"} quedarán sin categoría y se verán en "Otros".`
+        : `¿Eliminar "${c}"?`;
+      if (!confirm(aviso)) return;
+      const lote = writeBatch(db);
+      productos.filter((p) => mismaCat(p.categoria, c)).forEach((p) => lote.update(doc(db, "productos", p.id), { categoria: "" }));
+      lote.set(doc(db, "config", "tienda"), { categorias: lista.filter((_, k) => k !== i) }, { merge: true });
+      await lote.commit();
+      toast("Categoría eliminada");
+    }
+  } catch (err) {
+    errPermiso(err);
+  }
+});
+
+// En el formulario del artículo: crear una categoría sin salir de la pantalla
+$("#selCat").addEventListener("change", async (e) => {
+  const sel = e.target;
+  if (sel.value !== "__nueva") {
+    catPrevia = sel.value;
+    return;
+  }
+  const nombre = normCat(prompt("Nombre de la nueva categoría"));
+  if (!nombre) {
+    sel.value = catPrevia;
+    return;
+  }
+  const existente = listaCats().find((c) => mismaCat(c, nombre));
+  if (!existente && !(await agregarCategoria(nombre))) {
+    sel.value = catPrevia;
+    return;
+  }
+  llenarSelectCategorias(existente || nombre);
+});
+
 /* ---------- Artículos ---------- */
 function pintarProductos() {
-  $("#cats").innerHTML = [...new Set(productos.map((p) => (p.categoria || "").trim()).filter(Boolean))]
-    .map((c) => `<option value="${esc(c)}">`).join("");
+  pintarCategorias();
   $("#listaProd").innerHTML = productos.length
     ? productos
         .map((p) => {
           const stock = Number(p.cantidad) || 0;
           return `<div class="item" data-id="${esc(p.id)}">
-        ${p.imagen ? `<img src="${esc(miniatura(p.imagen, 120))}" alt="">` : `<div class="noimg"></div>`}
+        <img src="${esc(fotoUrl(p.imagen, 120))}" alt="">
         <div>
           <div class="t">${esc(p.nombre)}${enOferta(p) ? `<span class="pill of">Oferta</span>` : ""}${p.activo ? "" : `<span class="pill off">Oculto</span>`}</div>
           <div class="s">${esc(p.categoria || "Sin categoría")} · ${enOferta(p) ? `<s>${esc(precio(p.precio))}</s> <b>${esc(precio(p.precioOferta))}</b>` : esc(precio(p.precio))} ·
@@ -175,11 +303,11 @@ function abrirModal(p = null) {
   editando = p;
   fotoBlob = null;
   form.reset();
+  llenarSelectCategorias(p?.categoria || "");
   $("#prodError").hidden = true;
   $("#modalTitulo").textContent = p ? "Editar artículo" : "Nuevo artículo";
   if (p) {
     form.nombre.value = p.nombre || "";
-    form.categoria.value = p.categoria || "";
     form.precio.value = p.precio ?? "";
     form.cantidad.value = p.cantidad ?? 0;
     form.oferta.checked = !!p.oferta;
@@ -195,7 +323,7 @@ function abrirModal(p = null) {
 function verPreview(src) {
   $("#preview").hidden = !src;
   if (src) $("#preview").src = src;
-  $("#fotoLbl").textContent = src ? "Cambiar foto" : "Tomar foto o elegir de la galería";
+  $("#fotoLbl").textContent = src ? "Cambiar foto" : "Tomar foto o elegir de la galería (opcional)";
 }
 
 const cerrarModal = () => ($("#modal").hidden = true);
@@ -232,7 +360,6 @@ form.addEventListener("submit", async (e) => {
   if (!(precioN >= 0) || form.precio.value === "") return err("Escribe el precio.");
   if (!(cantidad >= 0)) return err("Escribe la cantidad (0 si no hay).");
   if (oferta && !(precioOferta > 0 && precioOferta < precioN)) return err("El precio de oferta debe ser mayor que 0 y menor que el precio normal.");
-  if (!editando?.imagen && !fotoBlob) return err("Agrega una foto del artículo.");
 
   const btn = $("#btnGuardar");
   btn.disabled = true;
@@ -243,7 +370,7 @@ form.addEventListener("submit", async (e) => {
 
     const datos = {
       nombre,
-      categoria: form.categoria.value.trim(),
+      categoria: form.categoria.value === "__nueva" ? "" : form.categoria.value.trim(),
       precio: precioN,
       cantidad,
       imagen,

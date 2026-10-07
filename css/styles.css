@@ -199,3 +199,10 @@ main.wrap,main.page,#panel{flex:1 0 auto}
 .precio{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px}
 .precio .viejo{margin-right:0}
 .foot{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+.ibtn[disabled]{opacity:.35;cursor:default}
+
+/* Pestañas del admin: se deslizan si no caben */
+.atabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.atabs::-webkit-scrollbar{display:none}
+.atab{flex:none;white-space:nowrap}
+.item>div:first-child+div,.item>div:nth-child(2){min-width:0}

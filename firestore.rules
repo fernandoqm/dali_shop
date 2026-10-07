@@ -81,7 +81,7 @@ service cloud.firestore {
     match /config/{id} {
       allow read: if true;
       allow write: if isAdmin()
-        && request.resource.data.keys().hasOnly(['tema','mostrarMensaje','mensaje','correoPedidos','mensajeros','direccion','telefonos','correoContacto','horario'])
+        && request.resource.data.keys().hasOnly(['tema','mostrarMensaje','mensaje','correoPedidos','mensajeros','direccion','telefonos','correoContacto','horario','categorias'])
         && esTexto(request.resource.data.get('tema', 'clasico'), 30)
         && request.resource.data.get('mostrarMensaje', true) is bool
         && esTexto(request.resource.data.get('mensaje', ''), 120)
@@ -91,7 +91,9 @@ service cloud.firestore {
         && esTexto(request.resource.data.get('correoContacto', ''), 120)
         && esTexto(request.resource.data.get('horario', ''), 200)
         && request.resource.data.get('mensajeros', []) is list
-        && request.resource.data.get('mensajeros', []).size() <= 20;
+        && request.resource.data.get('mensajeros', []).size() <= 20
+        && request.resource.data.get('categorias', []) is list
+        && request.resource.data.get('categorias', []).size() <= 30;
     }
 
     // ---------- Todo lo demás, bloqueado ----------

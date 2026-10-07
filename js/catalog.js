@@ -1,10 +1,11 @@
 import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { db } from "./firebase.js";
-import { $, esc, precio, miniatura, toast } from "./util.js";
+import { $, esc, precio, fotoUrl, toast } from "./util.js";
 import { enOferta, precioFinal, descuento } from "./producto.js";
 import * as cart from "./cart.js";
 import { iniciarTema } from "./temas.js";
 import { iniciarFooter } from "./footer.js";
+import { alConfig } from "./tiendaconfig.js";
 import { configurado, tienda } from "./config.js";
 import { waLink, textoConsulta } from "./notificar.js";
 
@@ -23,6 +24,11 @@ let productos = [];
 let categoria = "Todos";
 const TODOS = "Todos";
 const SIN_CAT = "Otros";
+let orden = [];
+alConfig((cfg) => {
+  orden = cfg.categorias || [];
+  if (cargado) render();
+});
 
 const catDe = (p) => (p.categoria || "").trim() || SIN_CAT;
 const stockDe = (p) => Math.max(0, Number(p.cantidad) || 0);
@@ -44,7 +50,15 @@ onSnapshot(
 );
 
 function render() {
-  const cats = [...new Set(productos.map(catDe))].sort((a, b) => a.localeCompare(b, "es"));
+  // Orden de las pestañas: el definido en el admin; las demás en orden alfabético y "Otros" al final
+  const usadas = [...new Set(productos.map(catDe))];
+  const ordenadas = [];
+  for (const o of orden) {
+    const m = usadas.find((u) => u.toLowerCase() === String(o).trim().toLowerCase());
+    if (m && !ordenadas.includes(m)) ordenadas.push(m);
+  }
+  const resto = usadas.filter((u) => !ordenadas.includes(u) && u !== SIN_CAT).sort((a, b) => a.localeCompare(b, "es"));
+  const cats = [...ordenadas, ...resto, ...(usadas.includes(SIN_CAT) ? [SIN_CAT] : [])];
   if (categoria !== TODOS && !cats.includes(categoria)) categoria = TODOS;
 
   // Solo se muestran pestañas de categorías que tienen artículos
@@ -76,7 +90,7 @@ function tarjeta(p) {
 
   return `<article class="prod ${agotado ? "agotado" : ""}" data-id="${esc(p.id)}">
     <div class="ph">
-      ${p.imagen ? `<img src="${esc(miniatura(p.imagen))}" alt="${esc(p.nombre)}" loading="lazy">` : ""}
+      <img src="${esc(fotoUrl(p.imagen))}" alt="${esc(p.nombre)}" loading="lazy">
       ${agotado ? "" : sticker}
       ${agotado ? `<span class="agotado-tag">Agotado</span>` : ""}
     </div>
@@ -124,7 +138,7 @@ function renderCart() {
     ? its
         .map(
           (i) => `<div class="linea" data-id="${esc(i.id)}">
-        ${i.imagen ? `<img src="${esc(miniatura(i.imagen, 150))}" alt="">` : `<div class="noimg"></div>`}
+        <img src="${esc(fotoUrl(i.imagen, 150))}" alt="">
         <div><div class="nom">${esc(i.nombre)}</div><div class="sub">${esc(precio(i.precio))}</div>
           <div class="qty"><button data-d="-1" aria-label="Menos">−</button><span>${i.cant}</span><button data-d="1" aria-label="Más">+</button></div></div>
         <button class="rm" aria-label="Quitar">&times;</button>

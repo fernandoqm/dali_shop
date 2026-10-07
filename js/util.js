@@ -13,6 +13,24 @@ export function miniatura(url, ancho = 500) {
   return url.replace("/upload/", `/upload/c_limit,w_${ancho},q_auto,f_auto/`);
 }
 
+// Imagen de reemplazo cuando el artículo no tiene foto o la foto no carga
+export const SIN_FOTO = new URL("../img/sin-foto.svg", import.meta.url).href;
+
+export const fotoUrl = (url, ancho = 500) => (url ? miniatura(url, ancho) : SIN_FOTO);
+
+// Si una imagen falla al cargar, se cambia (una sola vez) por la de reemplazo
+document.addEventListener(
+  "error",
+  (e) => {
+    const img = e.target;
+    if (img instanceof HTMLImageElement && img.src !== SIN_FOTO && !img.dataset.fb) {
+      img.dataset.fb = "1";
+      img.src = SIN_FOTO;
+    }
+  },
+  true
+);
+
 export function toast(msg, tipo = "ok") {
   let box = $("#toasts");
   if (!box) {
