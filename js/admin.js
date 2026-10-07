@@ -8,7 +8,7 @@ import { $, esc, precio, miniatura, fotoUrl, toast } from "./util.js";
 import { enOferta } from "./producto.js";
 import { comprimir, subir } from "./imagen.js";
 import { listarTemas, temaAuto, aplicarTema } from "./temas.js";
-import { configurado } from "./config.js";
+import { configurado, tienda } from "./config.js";
 
 let unsubs = [];
 let productos = [];
@@ -475,6 +475,26 @@ let filtro = "porEntregar";
 
 const soloDigitos = (t) => String(t || "").replace(/\D/g, "");
 
+// Mensaje de WhatsApp al cliente según el estado del pedido
+function avisoCliente(p) {
+  let tel = soloDigitos(p.cliente?.telefono);
+  if (tel.length === 8) tel = "506" + tel;
+  const nombre = (p.cliente?.nombre || "").trim().split(/\s+/)[0] || "";
+  const envio = p.tipo === "envio";
+  const msgs = {
+    nuevo: `recibimos tu pedido ${p.codigo}. En breve lo preparamos.`,
+    preparando: `estamos preparando tu pedido ${p.codigo}.`,
+    listo: envio
+      ? `tu pedido ${p.codigo} está listo y pronto saldrá con el mensajero. Te confirmamos el costo del envío.`
+      : `tu pedido ${p.codigo} está listo para recoger.`,
+    en_camino: `tu pedido ${p.codigo} va en camino.`,
+    entregado: `tu pedido ${p.codigo} fue entregado. ¡Gracias por tu compra!`,
+    cancelado: `tu pedido ${p.codigo} fue cancelado. Si tienes dudas, escríbenos.`
+  };
+  const texto = `Hola ${nombre}, te escribimos de ${tienda.nombre}: ${msgs[p.estado] || `tu pedido ${p.codigo} fue actualizado.`}`;
+  return `https://wa.me/${tel}?text=${encodeURIComponent(texto)}`;
+}
+
 function textoMensajero(p) {
   const cobro = p.pagado ? "Ya está pagado." : `Cobrar al entregar: ${precio(p.total)}`;
   return `Pedido ${p.codigo}\nCliente: ${p.cliente?.nombre} - ${p.cliente?.telefono}\n` +
@@ -525,7 +545,8 @@ function pintarPedidos() {
         <div class="d">${esc(f)} · ${envio ? "Envío" : "Recoge en tienda"} · <a href="tel:${esc(p.cliente?.telefono)}">${esc(p.cliente?.telefono)}</a>
           ${p.direccion ? `<br>${esc(p.direccion)}` : ""}${p.notas ? `<br><i>${esc(p.notas)}</i>` : ""}</div>
         <ul>${(p.items || []).map((i) => `<li>${esc(i.cant)} × ${esc(i.nombre)} — ${esc(precio(i.precio * i.cant))}</li>`).join("")}</ul>
-        <div class="row"><b>Total ${esc(precio(p.total))}</b></div>
+        <div class="row"><b>Total ${esc(precio(p.total))}</b>
+          ${p.cliente?.telefono ? `<a class="avisar" href="${esc(avisoCliente(p))}" target="_blank" rel="noopener">Avisar al cliente por WhatsApp</a>` : ""}</div>
         <div class="ctrl">
           <label class="f">Entrega
             <select data-est>${ESTADOS.filter(([k]) => envio || k !== "en_camino").map(([k, t]) => `<option value="${k}" ${k === p.estado ? "selected" : ""}>${t}</option>`).join("")}</select></label>

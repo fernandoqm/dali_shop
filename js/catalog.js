@@ -23,6 +23,26 @@ let categoria = TODOS;
 let busqueda = "";
 let orden = [];       // orden de categorías definido en el admin
 
+// Orden elegido por el cliente (se recuerda en su dispositivo)
+const ORDEN_KEY = "dali_orden";
+let ordenLista = "destacados";
+try {
+  ordenLista = localStorage.getItem(ORDEN_KEY) || "destacados";
+} catch {}
+
+function ordenar(l) {
+  const c = [...l];
+  const f = (p) => p.fecha?.seconds || 0;
+  if (ordenLista === "recientes") return c.sort((a, b) => f(b) - f(a));
+  if (ordenLista === "precio-asc") return c.sort((a, b) => precioFinal(a) - precioFinal(b));
+  if (ordenLista === "precio-desc") return c.sort((a, b) => precioFinal(b) - precioFinal(a));
+  if (ordenLista === "ofertas") return c.sort((a, b) => (enOferta(b) ? 1 : 0) - (enOferta(a) ? 1 : 0));
+  return c; // destacados primero y luego los más recientes (orden base)
+}
+
+// "Nuevo": agregado en los últimos 7 días
+const esNuevo = (p) => !!p.fecha?.seconds && Date.now() / 1000 - p.fecha.seconds < 7 * 86400;
+
 const catDe = (p) => (p.categoria || "").trim() || SIN_CAT;
 const stockDe = (p) => Math.max(0, Number(p.cantidad) || 0);
 // El cliente solo ve artículos con existencias
@@ -89,6 +109,7 @@ function render() {
     categoria === TODOS ? disponibles : categoria === OFERTAS ? disponibles.filter(enOferta) : disponibles.filter((p) => catDe(p) === categoria);
   const q = normal(busqueda.trim());
   if (q) lista = lista.filter((p) => normal(`${p.nombre} ${p.categoria || ""}`).includes(q));
+  lista = ordenar(lista);
 
   $("#titulo").textContent = q
     ? `Resultados para “${busqueda.trim()}”`
@@ -128,7 +149,7 @@ function tarjeta(p) {
       ${p.destacado ? `<span class="dest">Destacado</span>` : ""}
     </button>
     <div class="info">
-      ${p.categoria ? `<span class="cat">${esc(p.categoria)}</span>` : ""}
+      ${p.categoria || esNuevo(p) ? `<div class="meta">${p.categoria ? `<span class="cat">${esc(p.categoria)}</span>` : ""}${esNuevo(p) ? `<span class="nuevo">Nuevo</span>` : ""}</div>` : ""}
       <h3 data-a="ver">${nombre}</h3>
       ${precioHtml(p)}
       <div class="acciones">
@@ -224,6 +245,7 @@ function abrirDetalle(p) {
   $("#detAgregar").innerHTML = `${ICONOS.bolsa}<span>Agregar al carrito</span>`;
   $("#detWa").innerHTML = `${ICONOS.chat}<span>Pedir por WhatsApp</span>`;
   $("#detCompartir").innerHTML = `${ICONOS.compartir}<span>Compartir</span>`;
+  pintarRelacionados(p);
   pintarCantidad();
   $("#detalle").hidden = false;
   $("#detFondo").hidden = false;
@@ -257,6 +279,38 @@ $("#detMas").addEventListener("click", () => {
 });
 $("#detAgregar").addEventListener("click", () => {
   if (enDetalle && agregarAlCarrito(enDetalle, cantDetalle)) cerrarDetalle();
+});
+
+// "También te puede interesar": primero de la misma categoría
+function pintarRelacionados(p) {
+  const otros = visibles().filter((x) => x.id !== p.id);
+  const lista = [...otros.filter((x) => catDe(x) === catDe(p)), ...otros.filter((x) => catDe(x) !== catDe(p))].slice(0, 4);
+  $("#detRel").hidden = !lista.length;
+  $("#detRelGrid").innerHTML = lista
+    .map(
+      (x) => `<button class="rel-item" type="button" data-id="${esc(x.id)}">
+        <img src="${esc(fotoUrl(x.imagen, 300))}" alt="" loading="lazy">
+        <span>${esc(x.nombre)}</span><b>${esc(precio(precioFinal(x)))}</b></button>`
+    )
+    .join("");
+}
+
+$("#detRelGrid").addEventListener("click", (e) => {
+  const b = e.target.closest(".rel-item");
+  if (!b) return;
+  const x = visibles().find((y) => y.id === b.dataset.id);
+  if (!x) return;
+  abrirDetalle(x);
+  $("#detalle").scrollTop = 0;
+});
+
+$("#ordenar").value = ordenLista;
+$("#ordenar").addEventListener("change", (e) => {
+  ordenLista = e.target.value;
+  try {
+    localStorage.setItem(ORDEN_KEY, ordenLista);
+  } catch {}
+  if (cargado) render();
 });
 
 // Compartir el artículo (menú nativo del celular o copiar el enlace)
@@ -305,6 +359,11 @@ function renderCart() {
   $("#cartTotal").textContent = precio(cart.subtotal());
   const its = cart.items();
   $("#cartFoot").hidden = !its.length;
+  // Barra inferior del carrito en celular
+  $("#cartBar").hidden = !its.length;
+  $("#cbN").textContent = `${totalItems} artículo${totalItems === 1 ? "" : "s"}`;
+  $("#cbTotal").textContent = precio(cart.subtotal());
+  document.body.classList.toggle("con-barra", its.length > 0);
   const wa = waLink(textoConsulta(its));
   $("#btnWaCart").hidden = !wa || !its.length;
   if (wa) $("#btnWaCart").href = wa;
@@ -329,6 +388,7 @@ const abrirCarrito = (v) => {
   bloquear();
 };
 $("#btnCart").addEventListener("click", () => abrirCarrito(true));
+$("#cartBar").addEventListener("click", () => abrirCarrito(true));
 $("#btnClose").addEventListener("click", () => abrirCarrito(false));
 $("#overlay").addEventListener("click", () => abrirCarrito(false));
 

@@ -113,6 +113,10 @@ form.addEventListener("submit", async (e) => {
     });
 
     cart.vaciar();
+    try {
+      if ($("#recordar").checked) localStorage.setItem(KEY_CLIENTE, JSON.stringify({ nombre, telefono, direccion, tipo }));
+      else localStorage.removeItem(KEY_CLIENTE);
+    } catch {}
     const datos = { codigo, nombre, telefono, tipo, direccion, notas: form.notas.value.trim(), lineas: resumen.lineas, total: resumen.total };
     getDoc(doc(db, "config", "tienda"))
       .then((s) => enviarCorreo(datos, s.exists() ? s.data().correoPedidos : ""))
@@ -148,5 +152,17 @@ function exito(datos) {
     a.hidden = false;
   }
 }
+
+// Datos del cliente recordados en su propio dispositivo (no se guardan en el servidor)
+const KEY_CLIENTE = "dali_cliente";
+try {
+  const g = JSON.parse(localStorage.getItem(KEY_CLIENTE));
+  if (g) {
+    form.nombre.value = g.nombre || "";
+    form.telefono.value = g.telefono || "";
+    form.direccion.value = g.direccion || "";
+    if (g.tipo === "envio" || g.tipo === "recoger") form.tipo.value = g.tipo;
+  }
+} catch {}
 
 pintar();

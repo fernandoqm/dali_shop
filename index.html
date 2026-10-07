@@ -7,12 +7,12 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
-  <title>Dali Shop · Artículos para el hogar</title>
-  <meta name="description" content="Artículos para el hogar. Retira en tienda o recibe en tu casa. Pedidos por WhatsApp.">
+  <title>Dali Shop · Hogar, oficina y mucho más</title>
+  <meta name="description" content="Artículos para el hogar, la oficina y tu día a día. Retira en tienda o recibe tu pedido. Pedidos por WhatsApp.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Dali Shop">
-  <meta property="og:title" content="Dali Shop · Artículos para el hogar">
-  <meta property="og:description" content="Elige tus favoritos y retíralos en tienda o recíbelos en tu casa. Pedidos por WhatsApp.">
+  <meta property="og:title" content="Dali Shop · Hogar, oficina y mucho más">
+  <meta property="og:description" content="Artículos para el hogar, la oficina y tu día a día. Retira en tienda o recibe tu pedido. Pedidos por WhatsApp.">
   <meta property="og:image" content="https://fernandoqm.github.io/dali_shop/img/icon-512.png">
   <meta property="og:url" content="https://fernandoqm.github.io/dali_shop/">
   <meta name="twitter:card" content="summary">
@@ -35,9 +35,9 @@
 
   <section class="hero" aria-labelledby="heroTit">
     <div class="wrap hero-in">
-      <p class="eyebrow">Artículos para el hogar</p>
-      <h1 id="heroTit">Detalles que hacen <em>hogar</em></h1>
-      <p class="lead">Elige tus favoritos, agrégalos al carrito y retíralos en tienda o recíbelos en tu casa.</p>
+      <p class="eyebrow">Hogar · Oficina · Y mucho más</p>
+      <h1 id="heroTit">Detalles que hacen la <em>diferencia</em></h1>
+      <p class="lead">Encuentra artículos para tu casa, tu oficina y tu día a día. Retíralos en tienda o recíbelos donde estés.</p>
       <ul class="beneficios">
         <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Retiro en tienda</li>
         <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Envío a domicilio</li>
@@ -61,7 +61,18 @@
   <main class="wrap catalogo">
     <div class="sec-head">
       <h2 id="titulo">Todos los artículos</h2>
-      <span id="conteo"></span>
+      <div class="sec-tools">
+        <span id="conteo"></span>
+        <label class="orden"><span class="sr">Ordenar artículos</span>
+          <select id="ordenar">
+            <option value="destacados">Destacados</option>
+            <option value="recientes">Más recientes</option>
+            <option value="precio-asc">Precio: menor a mayor</option>
+            <option value="precio-desc">Precio: mayor a menor</option>
+            <option value="ofertas">Ofertas primero</option>
+          </select>
+        </label>
+      </div>
     </div>
     <section class="grid" id="grid" aria-live="polite">
       <div class="prod skel" aria-hidden="true"><div class="ph"></div><div class="info"><div class="sk" style="width:40%"></div><div class="sk" style="width:80%"></div><div class="sk" style="width:50%;height:16px"></div></div></div>
@@ -102,6 +113,10 @@
       <a class="btn wa" id="detWa" href="#" target="_blank" rel="noopener" hidden>Pedir por WhatsApp</a>
       <button class="btn sec" id="detCompartir" type="button">Compartir</button>
       <p class="nota" id="detNota"></p>
+      <div class="rel" id="detRel" hidden>
+        <h3>También te puede interesar</h3>
+        <div class="rel-grid" id="detRelGrid"></div>
+      </div>
     </div>
   </section>
 
@@ -116,6 +131,12 @@
       <a class="btn wa" id="btnWaCart" href="#" target="_blank" rel="noopener" hidden>Consultar por WhatsApp</a>
     </footer>
   </aside>
+
+  <!-- Barra del carrito (solo celular) -->
+  <button class="cart-bar" id="cartBar" type="button" hidden>
+    <span class="cb-info"><b id="cbN"></b><span id="cbTotal"></span></span>
+    <span class="cb-go">Ver carrito →</span>
+  </button>
 
   <footer class="foot" id="footer" hidden></footer>
 
