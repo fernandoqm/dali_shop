@@ -16,7 +16,7 @@ export const cloudinary = {
 export const tienda = {
   nombre: "Dali Shop",
   moneda: "$",              // símbolo que se muestra antes del precio
-  whatsapp: "",             // con código de país y sin signos, ej. 50612345678. Vacío = sin botón de WhatsApp
+  whatsapp: "50685646198",           // con código de país y sin signos, ej. 50612345678. Vacío = sin botón de WhatsApp
   costoEnvio: 0             // se suma al total cuando el cliente elige envío
 };
 
