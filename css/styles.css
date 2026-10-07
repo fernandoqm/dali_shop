@@ -211,3 +211,11 @@ main.wrap,main.page,#panel{flex:1 0 auto}
 .foto-btn{border:2px dashed var(--brand);background:var(--soft);color:var(--brand-d);font-weight:600;padding:20px 14px;border-radius:12px}
 .foto-btn::before{content:"📷";display:block;font-size:30px;line-height:1.2;margin-bottom:4px}
 .foto-btn:hover{background:var(--tint)}
+
+/* Botón del carrito con imagen */
+.cart-btn.cart-icon{position:relative;width:56px;height:56px;padding:0;border:0;background:none;border-radius:14px;display:grid;place-items:center;cursor:pointer;transition:transform .12s}
+.cart-btn.cart-icon:hover{transform:scale(1.06)}
+.cart-btn.cart-icon:active{transform:scale(.95)}
+.cart-btn.cart-icon:focus-visible{outline:2px solid #3ecfd9;outline-offset:2px}
+.cart-icon img{width:54px;height:54px;border-radius:12px;object-fit:cover}
+.cart-icon .n{position:absolute;top:-2px;right:-4px;min-width:22px;height:22px;background:#d9342b;color:#fff;border:2px solid #0b0b0b;font-weight:700}

@@ -126,7 +126,9 @@ function renderCart() {
     const p = productos.find((x) => x.id === it.id);
     if (!p || stockDe(p) <= 0) cart.quitar(it.id);
   }
-  $("#cartN").textContent = cart.cantidadTotal();
+  const totalItems = cart.cantidadTotal();
+  $("#cartN").textContent = totalItems;
+  $("#cartN").hidden = !totalItems;
   $("#cartTotal").textContent = precio(cart.subtotal());
   const its = cart.items();
   $("#btnPedido").style.display = its.length ? "" : "none";
