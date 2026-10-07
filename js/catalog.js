@@ -4,9 +4,12 @@ import { $, esc, precio, miniatura, toast } from "./util.js";
 import { enOferta, precioFinal, descuento } from "./producto.js";
 import * as cart from "./cart.js";
 import { iniciarTema } from "./temas.js";
-import { configurado } from "./config.js";
+import { iniciarFooter } from "./footer.js";
+import { configurado, tienda } from "./config.js";
+import { waLink, textoConsulta } from "./notificar.js";
 
 iniciarTema();
+iniciarFooter();
 
 let cargado = false;
 const aviso = (t) => {
@@ -113,6 +116,10 @@ function renderCart() {
   $("#cartTotal").textContent = precio(cart.subtotal());
   const its = cart.items();
   $("#btnPedido").style.display = its.length ? "" : "none";
+  const wa = waLink(textoConsulta(its));
+  $("#btnWaCart").hidden = !wa;
+  if (wa) $("#btnWaCart").href = wa;
+  $("#btnWaCart").textContent = its.length ? "Consultar este pedido por WhatsApp" : "Consultar por WhatsApp";
   $("#cartBody").innerHTML = its.length
     ? its
         .map(
@@ -146,3 +153,10 @@ $("#cartBody").addEventListener("click", (e) => {
 
 window.addEventListener("cart:change", renderCart);
 renderCart();
+
+// Botón flotante de WhatsApp (consultas generales)
+if (tienda.whatsapp) {
+  const f = $("#waFlot");
+  f.href = waLink(textoConsulta([]));
+  f.hidden = false;
+}

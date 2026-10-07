@@ -1,0 +1,16 @@
+{
+  "nombre": "Halloween",
+  "descripcion": "Oscuro con naranja y morado",
+  "saludo": "🎃 Ofertas de miedo",
+  "colores": [
+    "#1f1a24",
+    "#c85a0a",
+    "#8b3fd1"
+  ],
+  "auto": [
+    {
+      "desde": "10-15",
+      "hasta": "11-02"
+    }
+  ]
+}

@@ -28,6 +28,8 @@
     <p class="vacio" id="vacio">Cargando…</p>
   </main>
 
+  <a class="wa-flot" id="waFlot" href="#" target="_blank" rel="noopener" hidden aria-label="Escribir por WhatsApp">WhatsApp</a>
+
   <div class="overlay" id="overlay" hidden></div>
   <aside class="drawer" id="drawer" hidden aria-label="Carrito">
     <header><span>Tu carrito</span><button class="x" id="btnClose" aria-label="Cerrar">&times;</button></header>
@@ -35,8 +37,11 @@
     <footer>
       <div class="total"><span>Subtotal</span><span id="cartTotal"></span></div>
       <a class="btn" id="btnPedido" href="pedido.html">Hacer pedido</a>
+      <a class="btn wa" id="btnWaCart" href="#" target="_blank" rel="noopener" hidden style="margin-top:10px">Consultar por WhatsApp</a>
     </footer>
   </aside>
+
+  <footer class="foot" id="footer" hidden></footer>
 
   <script type="module" src="js/catalog.js"></script>
 </body>

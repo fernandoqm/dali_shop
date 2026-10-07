@@ -1,12 +1,15 @@
-import { doc, collection, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { doc, collection, runTransaction, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { db } from "./firebase.js";
 import { tienda } from "./config.js";
 import { $, esc, precio } from "./util.js";
 import { precioFinal } from "./producto.js";
 import * as cart from "./cart.js";
 import { iniciarTema } from "./temas.js";
+import { iniciarFooter } from "./footer.js";
+import { waLink, textoPedido, enviarCorreo } from "./notificar.js";
 
 iniciarTema();
+iniciarFooter();
 
 const form = $("#form");
 let enviando = false;
@@ -104,7 +107,11 @@ form.addEventListener("submit", async (e) => {
     });
 
     cart.vaciar();
-    exito(codigo, tipo, nombre, resumen);
+    const datos = { codigo, nombre, telefono, tipo, direccion, notas: form.notas.value.trim(), lineas: resumen.lineas, total: resumen.total };
+    getDoc(doc(db, "config", "tienda"))
+      .then((s) => enviarCorreo(datos, s.exists() ? s.data().correoPedidos : ""))
+      .catch((e) => console.warn("No se pudo enviar el correo del pedido", e));
+    exito(datos);
   } catch (err) {
     console.error(err);
     const propio = err instanceof Error && /^"|^De "/.test(err.message);
@@ -116,20 +123,17 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-function exito(codigo, tipo, nombre, { lineas, total }) {
+function exito(datos) {
   form.hidden = true;
   $("#vacio").hidden = true;
   $("#exito").hidden = false;
-  $("#codigo").textContent = codigo;
+  $("#codigo").textContent = datos.codigo;
   $("#textoExito").textContent =
-    tipo === "envio" ? "Te contactaremos para coordinar el envío." : "Te avisaremos cuando esté listo para recoger.";
-  if (tienda.whatsapp) {
-    const texto =
-      `Hola, soy ${nombre}. Hice el pedido ${codigo} (${tipo === "envio" ? "envío" : "recojo"}):\n` +
-      lineas.map((l) => `• ${l.cant} x ${l.nombre}`).join("\n") +
-      `\nTotal: ${precio(total)}`;
+    datos.tipo === "envio" ? "Te contactaremos para coordinar el envío." : "Te avisaremos cuando esté listo para recoger.";
+  const link = waLink(textoPedido(datos));
+  if (link) {
     const a = $("#btnWa");
-    a.href = `https://wa.me/${tienda.whatsapp}?text=${encodeURIComponent(texto)}`;
+    a.href = link;
     a.hidden = false;
   }
 }

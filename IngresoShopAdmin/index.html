@@ -37,6 +37,7 @@
         <button class="atab" role="tab" data-tab="articulos" aria-selected="true">Artículos</button>
         <button class="atab" role="tab" data-tab="pedidos" aria-selected="false">Pedidos <span class="badge" id="nuevos" hidden>0</span></button>
         <button class="atab" role="tab" data-tab="apariencia" aria-selected="false">Apariencia</button>
+        <button class="atab" role="tab" data-tab="ajustes" aria-selected="false">Ajustes</button>
       </div>
 
       <section id="tabArticulos">
@@ -45,7 +46,35 @@
       </section>
 
       <section id="tabPedidos" hidden>
+        <nav class="tabs" id="filtrosPed" aria-label="Filtrar pedidos"></nav>
         <div id="listaPed"></div>
+      </section>
+
+      <section id="tabAjustes" hidden>
+        <form id="negocioForm" class="box">
+          <h2>Datos del negocio (pie de página)</h2>
+          <label class="f">Dirección: "Estamos ubicados en…"<textarea id="negDireccion" rows="2" maxlength="200"></textarea></label>
+          <label class="f">Teléfonos (uno por línea o separados por coma)<textarea id="negTelefonos" rows="2" maxlength="200" placeholder="2222-3333, 8888-9999"></textarea></label>
+          <label class="f">Correo de contacto<input id="negCorreo" type="email" inputmode="email" maxlength="120"></label>
+          <label class="f">Horario (opcional)<textarea id="negHorario" rows="2" maxlength="200" placeholder="Lunes a sábado, 9:00 a 18:00"></textarea></label>
+          <button class="btn" type="submit" style="max-width:260px">Guardar datos del negocio</button>
+        </form>
+        <form id="ajustesForm" class="box">
+          <h2>Pedidos por correo</h2>
+          <label class="f">Correo donde llegan los pedidos nuevos<input id="correoPedidos" type="email" inputmode="email" maxlength="120" placeholder="pedidos@tucorreo.com"></label>
+          <button class="btn" type="submit" style="max-width:260px">Guardar correo</button>
+        </form>
+        <div class="box">
+          <h2>Mensajeros</h2>
+          <div id="listaMens"></div>
+          <form id="mensForm" style="margin-top:12px">
+            <div class="opts">
+              <label class="f">Nombre<input id="mensNombre" maxlength="60" required></label>
+              <label class="f">Teléfono (con código de país)<input id="mensTel" type="tel" inputmode="tel" maxlength="25" placeholder="50612345678"></label>
+            </div>
+            <button class="btn sec" type="submit" style="max-width:260px">Agregar mensajero</button>
+          </form>
+        </div>
       </section>
 
       <section id="tabApariencia" hidden>

@@ -7,13 +7,15 @@ import { auth, db } from "./firebase.js";
 import { $, esc, precio, miniatura, toast } from "./util.js";
 import { enOferta } from "./producto.js";
 import { comprimir, subir } from "./imagen.js";
-import { TEMAS, temaAuto, aplicar } from "./temas.js";
+import { listarTemas, temaAuto, aplicarTema } from "./temas.js";
 import { configurado } from "./config.js";
 
 let unsubs = [];
 let productos = [];
 let editando = null;   // producto en edición (null = nuevo)
 let fotoBlob = null;
+let config = {};      // documento config/tienda
+let pedidos = [];
 
 /* ---------- Sesión ---------- */
 onAuthStateChanged(auth, (user) => {
@@ -28,9 +30,15 @@ onAuthStateChanged(auth, (user) => {
       productos.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
       pintarProductos();
     }, errPermiso),
-    onSnapshot(doc(db, "config", "tienda"), (s) => cargarTema(s.exists() ? s.data() : null), errPermiso),
-    onSnapshot(query(collection(db, "pedidos"), orderBy("fecha", "desc"), limit(100)), (s) => {
-      pintarPedidos(s.docs.map((d) => ({ id: d.id, ...d.data() })));
+    onSnapshot(doc(db, "config", "tienda"), (s) => {
+      config = s.exists() ? s.data() : {};
+      cargarTema(config);
+      cargarAjustes(config);
+      pintarPedidos();
+    }, errPermiso),
+    onSnapshot(query(collection(db, "pedidos"), orderBy("fecha", "desc"), limit(200)), (s) => {
+      pedidos = s.docs.map((d) => ({ id: d.id, ...d.data() }));
+      pintarPedidos();
     }, errPermiso)
   );
 });
@@ -66,34 +74,40 @@ document.querySelectorAll(".atab").forEach((b) =>
     $("#tabArticulos").hidden = b.dataset.tab !== "articulos";
     $("#tabPedidos").hidden = b.dataset.tab !== "pedidos";
     $("#tabApariencia").hidden = b.dataset.tab !== "apariencia";
+    $("#tabAjustes").hidden = b.dataset.tab !== "ajustes";
   })
 );
 
-/* ---------- Apariencia (temas de temporada) ---------- */
-const opcionesTema = [
-  ["auto", { nombre: "Automático por fecha", vars: {} }],
-  ...Object.entries(TEMAS)
-];
-$("#temas").innerHTML = opcionesTema
-  .map(([id, t]) => `<label class="tema"><input type="radio" name="tema" value="${esc(id)}">
-    <b>${esc(t.nombre)}</b>
-    <span class="dots">${["--bg", "--brand", "--offer"].map((v) => (t.vars[v] ? `<i style="background:${t.vars[v]}"></i>` : "")).join("")}</span>
-    <small>${id === "auto" ? "Navidad, Halloween y San Valentín según el calendario" : esc(t.saludo || "Sin mensaje")}</small></label>`)
-  .join("");
-
+/* ---------- Apariencia (temas por carpeta) ---------- */
 const temaForm = $("#temaForm");
+let listaTemas = null;
+
+listarTemas()
+  .then((l) => {
+    listaTemas = l;
+    const opciones = [{ id: "auto", nombre: "Automático por fecha", descripcion: "Cada tema se activa en sus fechas (ver tema.json)", colores: [] }, ...l.temas];
+    $("#temas").innerHTML = opciones
+      .map((t) => `<label class="tema"><input type="radio" name="tema" value="${esc(t.id)}">
+        <b>${esc(t.nombre)}</b>
+        <span class="dots">${(t.colores || []).map((c) => `<i style="background:${esc(c)}"></i>`).join("")}</span>
+        <small>${esc(t.descripcion || "")}</small></label>`)
+      .join("");
+    cargarTema(config);
+  })
+  .catch(() => ($("#temas").innerHTML = `<p class="s" style="color:var(--warn)">No se pudo leer temas/temas.json</p>`));
+
 temaForm.addEventListener("change", (e) => {
-  if (e.target.name !== "tema") return;
+  if (e.target.name !== "tema" || !listaTemas) return;
   // Vista previa inmediata en el panel; no se publica hasta guardar
-  aplicar(e.target.value === "auto" ? temaAuto() : e.target.value);
+  aplicarTema(e.target.value === "auto" ? temaAuto(listaTemas) : e.target.value);
 });
 
 function cargarTema(cfg) {
-  const id = cfg?.tema || "clasico";
+  const id = cfg?.tema || listaTemas?.porDefecto || "clasico";
   const r = temaForm.querySelector(`input[name="tema"][value="${id}"]`);
   if (r) r.checked = true;
   $("#mostrarMensaje").checked = cfg?.mostrarMensaje !== false;
-  $("#mensaje").value = cfg?.mensaje || "";
+  if (document.activeElement !== $("#mensaje")) $("#mensaje").value = cfg?.mensaje || "";
 }
 
 temaForm.addEventListener("submit", async (e) => {
@@ -106,7 +120,7 @@ temaForm.addEventListener("submit", async (e) => {
       tema,
       mostrarMensaje: $("#mostrarMensaje").checked,
       mensaje: $("#mensaje").value.trim()
-    });
+    }, { merge: true });
     toast("Apariencia guardada");
   } catch (err) {
     errPermiso(err);
@@ -251,51 +265,173 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-/* ---------- Pedidos ---------- */
-const ESTADOS = ["nuevo", "preparando", "listo", "entregado", "cancelado"];
-
-function pintarPedidos(peds) {
-  const nuevos = peds.filter((p) => p.estado === "nuevo").length;
-  $("#nuevos").textContent = nuevos;
-  $("#nuevos").hidden = !nuevos;
-  $("#listaPed").innerHTML = peds.length
-    ? peds
-        .map((p) => {
-          const f = p.fecha?.toDate ? p.fecha.toDate().toLocaleString("es", { dateStyle: "short", timeStyle: "short" }) : "";
-          return `<div class="pedido" data-id="${esc(p.id)}">
-        <div class="h"><span>#${esc(p.codigo)} · ${esc(p.cliente?.nombre)}</span><span class="est ${esc(p.estado)}">${esc(p.estado)}</span></div>
-        <div class="d">${esc(f)} · ${p.tipo === "envio" ? "Envío" : "Recoge en tienda"} · <a href="tel:${esc(p.cliente?.telefono)}">${esc(p.cliente?.telefono)}</a>
-          ${p.direccion ? `<br>${esc(p.direccion)}` : ""}${p.notas ? `<br><i>${esc(p.notas)}</i>` : ""}</div>
-        <ul>${(p.items || []).map((i) => `<li>${esc(i.cant)} × ${esc(i.nombre)} — ${esc(precio(i.precio * i.cant))}</li>`).join("")}</ul>
-        <div class="row"><b>Total ${esc(precio(p.total))}</b>
-          <select data-est aria-label="Cambiar estado">${ESTADOS.map((s) => `<option ${s === p.estado ? "selected" : ""}>${s}</option>`).join("")}</select></div>
-      </div>`;
-        })
-        .join("")
-    : `<p class="vacio">Aún no hay pedidos.</p>`;
-  window.__peds = peds;
+/* ---------- Ajustes (correo de pedidos y mensajeros) ---------- */
+function cargarAjustes(cfg) {
+  const campos = { correoPedidos: "#correoPedidos", direccion: "#negDireccion", telefonos: "#negTelefonos", correoContacto: "#negCorreo", horario: "#negHorario" };
+  for (const [k, sel] of Object.entries(campos)) if (document.activeElement !== $(sel)) $(sel).value = cfg[k] || "";
+  const m = cfg.mensajeros || [];
+  $("#listaMens").innerHTML = m.length
+    ? m.map((x, i) => `<div class="item" data-i="${i}" style="grid-template-columns:1fr auto">
+        <div><div class="t">${esc(x.nombre)}</div><div class="s">${esc(x.telefono || "Sin teléfono")}</div></div>
+        <button class="ibtn" data-del aria-label="Eliminar mensajero">🗑</button></div>`).join("")
+    : `<p class="s" style="color:var(--muted)">Aún no hay mensajeros.</p>`;
 }
 
-$("#listaPed").addEventListener("change", async (e) => {
-  const sel = e.target.closest("[data-est]");
-  if (!sel) return;
-  const id = sel.closest(".pedido").dataset.id;
-  const ped = (window.__peds || []).find((p) => p.id === id);
-  const estado = sel.value;
+async function guardarConfig(parcial, msg) {
   try {
-    // Al cancelar se devuelven las existencias (una sola vez)
-    if (estado === "cancelado" && !ped.repuesto) {
-      const b = writeBatch(db);
-      (ped.items || []).forEach((i) => b.update(doc(db, "productos", i.id), { cantidad: increment(i.cant) }));
-      b.update(doc(db, "pedidos", id), { estado, repuesto: true });
-      await b.commit();
-      toast("Pedido cancelado y existencias devueltas");
-    } else {
-      await updateDoc(doc(db, "pedidos", id), { estado });
-      toast("Estado actualizado");
+    await setDoc(doc(db, "config", "tienda"), parcial, { merge: true });
+    toast(msg);
+  } catch (err) {
+    errPermiso(err);
+  }
+}
+
+$("#ajustesForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const correo = $("#correoPedidos").value.trim();
+  if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return toast("El correo no es válido", "err");
+  guardarConfig({ correoPedidos: correo }, "Correo guardado");
+});
+
+$("#negocioForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const correo = $("#negCorreo").value.trim();
+  if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) return toast("El correo de contacto no es válido", "err");
+  guardarConfig({
+    direccion: $("#negDireccion").value.trim(),
+    telefonos: $("#negTelefonos").value.trim(),
+    correoContacto: correo,
+    horario: $("#negHorario").value.trim()
+  }, "Datos del negocio guardados");
+});
+
+$("#mensForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const nombre = $("#mensNombre").value.trim();
+  const telefono = $("#mensTel").value.trim();
+  if (!nombre) return toast("Escribe el nombre del mensajero", "err");
+  const lista = [...(config.mensajeros || []), { nombre, telefono }];
+  if (lista.length > 20) return toast("Máximo 20 mensajeros", "err");
+  guardarConfig({ mensajeros: lista }, "Mensajero agregado");
+  e.target.reset();
+});
+
+$("#listaMens").addEventListener("click", (e) => {
+  const row = e.target.closest("[data-i]");
+  if (!row || !e.target.closest("[data-del]")) return;
+  const lista = [...(config.mensajeros || [])];
+  const [x] = lista.splice(Number(row.dataset.i), 1);
+  if (confirm(`¿Eliminar a ${x.nombre}? Los pedidos ya asignados conservan sus datos.`)) guardarConfig({ mensajeros: lista }, "Mensajero eliminado");
+});
+
+/* ---------- Pedidos ---------- */
+const ESTADOS = [
+  ["nuevo", "Nuevo"], ["preparando", "Preparando"], ["listo", "Listo"],
+  ["en_camino", "En camino"], ["entregado", "Entregado"], ["cancelado", "Cancelado"]
+];
+const nombreEstado = (e) => ESTADOS.find((x) => x[0] === e)?.[1] || e;
+const METODOS = ["Efectivo", "Transferencia", "Tarjeta", "Otro"];
+
+const FILTROS = {
+  porEntregar: ["Por entregar", (p) => !["entregado", "cancelado"].includes(p.estado)],
+  sinPagar: ["Sin pagar", (p) => !p.pagado && p.estado !== "cancelado"],
+  entregados: ["Entregados", (p) => p.estado === "entregado"],
+  cancelados: ["Cancelados", (p) => p.estado === "cancelado"],
+  todos: ["Todos", () => true]
+};
+let filtro = "porEntregar";
+
+const soloDigitos = (t) => String(t || "").replace(/\D/g, "");
+
+function textoMensajero(p) {
+  const cobro = p.pagado ? "Ya está pagado." : `Cobrar al entregar: ${precio(p.total)}`;
+  return `Pedido ${p.codigo}\nCliente: ${p.cliente?.nombre} - ${p.cliente?.telefono}\n` +
+    `Dirección: ${p.direccion || "—"}${p.notas ? `\nNotas: ${p.notas}` : ""}\n` +
+    `${(p.items || []).map((i) => `• ${i.cant} x ${i.nombre}`).join("\n")}\n${cobro}`;
+}
+
+function pintarPedidos() {
+  const nuevos = pedidos.filter((p) => p.estado === "nuevo").length;
+  $("#nuevos").textContent = nuevos;
+  $("#nuevos").hidden = !nuevos;
+
+  $("#filtrosPed").innerHTML = Object.entries(FILTROS)
+    .map(([k, [t, fn]]) => `<button class="tab" data-f="${k}" aria-selected="${k === filtro}">${t} (${pedidos.filter(fn).length})</button>`)
+    .join("");
+
+  const lista = pedidos.filter(FILTROS[filtro][1]);
+  const mens = config.mensajeros || [];
+  $("#listaPed").innerHTML = lista.length
+    ? lista.map((p) => {
+        const f = p.fecha?.toDate ? p.fecha.toDate().toLocaleString("es", { dateStyle: "short", timeStyle: "short" }) : "";
+        const envio = p.tipo === "envio";
+        const m = p.mensajero;
+        const tel = soloDigitos(m?.telefono);
+        return `<div class="pedido" data-id="${esc(p.id)}">
+        <div class="h"><span>#${esc(p.codigo)} · ${esc(p.cliente?.nombre)}</span>
+          <span><span class="est ${p.pagado ? "listo" : "nuevo"}">${p.pagado ? "Pagado" : "Sin pagar"}</span> <span class="est ${esc(p.estado)}">${esc(nombreEstado(p.estado))}</span></span></div>
+        <div class="d">${esc(f)} · ${envio ? "Envío" : "Recoge en tienda"} · <a href="tel:${esc(p.cliente?.telefono)}">${esc(p.cliente?.telefono)}</a>
+          ${p.direccion ? `<br>${esc(p.direccion)}` : ""}${p.notas ? `<br><i>${esc(p.notas)}</i>` : ""}</div>
+        <ul>${(p.items || []).map((i) => `<li>${esc(i.cant)} × ${esc(i.nombre)} — ${esc(precio(i.precio * i.cant))}</li>`).join("")}</ul>
+        <div class="row"><b>Total ${esc(precio(p.total))}</b></div>
+        <div class="ctrl">
+          <label class="f">Entrega
+            <select data-est>${ESTADOS.filter(([k]) => envio || k !== "en_camino").map(([k, t]) => `<option value="${k}" ${k === p.estado ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+          <label class="f">Pago
+            <select data-pagado><option value="0" ${p.pagado ? "" : "selected"}>Sin pagar</option><option value="1" ${p.pagado ? "selected" : ""}>Pagado</option></select></label>
+          <label class="f">Método de pago
+            <select data-metodo><option value="">—</option>${METODOS.map((x) => `<option ${x === p.metodoPago ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+          ${envio ? `<label class="f">Mensajero
+            <select data-mens><option value="">Sin asignar</option>${mens.map((x, i) => `<option value="${i}" ${m && m.nombre === x.nombre ? "selected" : ""}>${esc(x.nombre)}</option>`).join("")}
+              ${m && !mens.some((x) => x.nombre === m.nombre) ? `<option selected>${esc(m.nombre)}</option>` : ""}</select></label>` : ""}
+        </div>
+        ${envio && m ? `<div class="d" style="margin:8px 0 0">Mensajero: <b>${esc(m.nombre)}</b>${m.telefono ? ` · <a href="tel:${esc(m.telefono)}">${esc(m.telefono)}</a>` : ""}
+          ${tel ? ` · <a href="https://wa.me/${tel}?text=${encodeURIComponent(textoMensajero(p))}" target="_blank" rel="noopener">Enviarle el pedido por WhatsApp</a>` : ""}</div>` : ""}
+      </div>`;
+      }).join("")
+    : `<p class="vacio">No hay pedidos en esta vista.</p>`;
+}
+
+$("#filtrosPed").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-f]");
+  if (!b) return;
+  filtro = b.dataset.f;
+  pintarPedidos();
+});
+
+$("#listaPed").addEventListener("change", async (e) => {
+  const el = e.target;
+  const id = el.closest(".pedido")?.dataset.id;
+  const ped = pedidos.find((p) => p.id === id);
+  if (!ped) return;
+  try {
+    if (el.matches("[data-est]")) {
+      const estado = el.value;
+      // Al cancelar se devuelven las existencias (una sola vez)
+      if (estado === "cancelado" && !ped.repuesto) {
+        const b = writeBatch(db);
+        (ped.items || []).forEach((i) => b.update(doc(db, "productos", i.id), { cantidad: increment(i.cant) }));
+        b.update(doc(db, "pedidos", id), { estado, repuesto: true });
+        await b.commit();
+        toast("Pedido cancelado y existencias devueltas");
+      } else {
+        await updateDoc(doc(db, "pedidos", id), { estado });
+        toast("Estado actualizado");
+      }
+    } else if (el.matches("[data-pagado]")) {
+      const pagado = el.value === "1";
+      await updateDoc(doc(db, "pedidos", id), { pagado, fechaPago: pagado ? serverTimestamp() : null });
+      toast(pagado ? "Marcado como pagado" : "Marcado sin pagar");
+    } else if (el.matches("[data-metodo]")) {
+      await updateDoc(doc(db, "pedidos", id), { metodoPago: el.value });
+      toast("Método de pago guardado");
+    } else if (el.matches("[data-mens]")) {
+      const x = el.value === "" ? null : (config.mensajeros || [])[Number(el.value)];
+      await updateDoc(doc(db, "pedidos", id), { mensajero: x ? { nombre: x.nombre, telefono: x.telefono || "" } : null });
+      toast(x ? `Asignado a ${x.nombre}` : "Mensajero quitado");
     }
   } catch (err) {
-    sel.value = ped.estado;
     errPermiso(err);
+    pintarPedidos();
   }
 });

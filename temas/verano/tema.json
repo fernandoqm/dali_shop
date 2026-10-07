@@ -1,0 +1,11 @@
+{
+  "nombre": "Verano",
+  "descripcion": "Turquesa y naranja",
+  "saludo": "☀️ Ofertas de verano",
+  "colores": [
+    "#f3fbfc",
+    "#0b7d96",
+    "#e8590c"
+  ],
+  "auto": []
+}

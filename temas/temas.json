@@ -1,0 +1,12 @@
+{
+  "porDefecto": "clasico",
+  "temas": [
+    "clasico",
+    "navidad",
+    "halloween",
+    "san_valentin",
+    "dia_madre",
+    "verano",
+    "otono"
+  ]
+}

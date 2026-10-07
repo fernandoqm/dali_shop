@@ -1,0 +1,11 @@
+{
+  "nombre": "Dali (negro y dorado)",
+  "descripcion": "Tema base de la tienda",
+  "saludo": "",
+  "colores": [
+    "#faf7f0",
+    "#9a6b0c",
+    "#d9342b"
+  ],
+  "auto": []
+}

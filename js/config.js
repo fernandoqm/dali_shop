@@ -22,3 +22,10 @@ export const tienda = {
 
 // true cuando ya reemplazaste los valores de ejemplo de Firebase
 export const configurado = !String(firebaseConfig.apiKey).startsWith("TU_");
+
+// Aviso de pedidos por correo con EmailJS (https://www.emailjs.com). Si dejas vacío, no se envía correo.
+export const emailjs = {
+  serviceId: "",
+  templateId: "",
+  publicKey: ""
+};

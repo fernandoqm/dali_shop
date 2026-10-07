@@ -1,0 +1,16 @@
+{
+  "nombre": "San Valentín",
+  "descripcion": "Rosa y rojo",
+  "saludo": "💝 Detalles para quien más quieres",
+  "colores": [
+    "#fff5f8",
+    "#c2185b",
+    "#e11d48"
+  ],
+  "auto": [
+    {
+      "desde": "02-01",
+      "hasta": "02-14"
+    }
+  ]
+}

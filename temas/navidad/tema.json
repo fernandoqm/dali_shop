@@ -1,0 +1,16 @@
+{
+  "nombre": "Navidad",
+  "descripcion": "Rojo y verde, luces en el encabezado y nieve",
+  "saludo": "🎄 ¡Feliz Navidad! Regalos para el hogar",
+  "colores": [
+    "#fbf5f0",
+    "#b3202a",
+    "#1f7a3d"
+  ],
+  "auto": [
+    {
+      "desde": "11-25",
+      "hasta": "01-06"
+    }
+  ]
+}

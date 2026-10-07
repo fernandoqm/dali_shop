@@ -1,0 +1,29 @@
+:root{--bg:#fbf5f0;--card:#ffffff;--ink:#2b2622;--muted:#7a6f66;--line:#e8dfd5;--on-brand:#ffffff;--brand:#b3202a;--brand-d:#8a1720;--offer:#1f7a3d;--soft:#f1e4dc;--tint:#fbe9e9}
+
+/* Luces navideñas bajo el encabezado */
+.top{position:sticky;border-bottom:0}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-10px;height:10px;pointer-events:none;
+  background:
+    radial-gradient(circle at 10px 4px,#e53935 0 3px,transparent 4px) 0 0/40px 10px,
+    radial-gradient(circle at 20px 4px,#ffc107 0 3px,transparent 4px) 0 0/40px 10px,
+    radial-gradient(circle at 30px 4px,#43a047 0 3px,transparent 4px) 0 0/40px 10px;
+  animation:luces 1.6s ease-in-out infinite alternate}
+@keyframes luces{from{opacity:1}to{opacity:.45}}
+
+/* Mensaje tipo bastón de caramelo */
+.banner{background:repeating-linear-gradient(135deg,#b3202a 0 16px,#8a1720 16px 32px);text-shadow:0 1px 2px rgba(0,0,0,.35)}
+
+/* Nieve cayendo (no bloquea clics) */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:15;opacity:.85;
+  background-image:
+    radial-gradient(3px 3px at 20px 30px,#bcd7ee,transparent),
+    radial-gradient(2px 2px at 110px 90px,#bcd7ee,transparent),
+    radial-gradient(4px 4px at 170px 20px,#cfe3f5,transparent),
+    radial-gradient(2px 2px at 60px 140px,#bcd7ee,transparent),
+    radial-gradient(3px 3px at 140px 170px,#cfe3f5,transparent);
+  background-size:200px 200px;animation:nieve 14s linear infinite}
+@keyframes nieve{to{background-position:0 200px}}
+
+.sticker{background:#1f7a3d}
+.foot{border-top:3px solid #1f7a3d}
+@media (prefers-reduced-motion:reduce){body::before,.top::after{animation:none}}
